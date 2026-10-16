@@ -23,6 +23,7 @@ dist-ssr/
 .tanstack/
 .nitro/
 .wrangler/
+supabase/.temp/
 coverage/
 src/routeTree.gen.ts
 
@@ -35,6 +36,9 @@ logs/
 
 # Lovable planning notes are not application source
 .lovable/plan/
+
+# Local development context and agent notes
+agents/
 
 # Editor and OS files
 .vscode/*
