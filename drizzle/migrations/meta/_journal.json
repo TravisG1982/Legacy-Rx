@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790923226974,
+      "tag": "0000_orders_fufillment_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790923371302,
+      "tag": "0001_orders_prescription_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790925358167,
+      "tag": "0002_subscriptions_coupons_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791175537159,
+      "tag": "0003_fuse_brand_orders",
+      "breakpoints": true
+    }
+  ]
+}

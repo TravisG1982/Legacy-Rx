@@ -1,0 +1,49 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+*.local
+
+# Database exports and private files
+*.backup
+*.dump
+*.sql.gz
+*.pem
+*.p12
+*.pfx
+
+# Dependencies and generated output
+node_modules/
+dist/
+dist-ssr/
+.output/
+.vinxi/
+.tanstack/
+.nitro/
+.wrangler/
+coverage/
+src/routeTree.gen.ts
+
+# Logs and caches
+logs/
+*.log
+.cache/
+.vite/
+.turbo/
+
+# Lovable planning notes are not application source
+.lovable/plan/
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
