@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CtaBand } from "../components/Brand";
 import { useFromPrices } from "@/hooks/use-live-prices";
-import semaVial from "../assets/semaglutide-vial.webp.asset.json";
-import tirzVial from "../assets/tirzepatide-vial.webp.asset.json";
+import semaVial from "../assets/semaglutide-vial.webp";
+import tirzVial from "../assets/tirzepatide-vial.webp";
 
 export const Route = createFileRoute("/medications")({
   head: () => ({
@@ -33,7 +33,7 @@ function MedicationsPage() {
           </div>
           <div className="lx-grid grid-2" style={{ marginTop: 40 }}>
             <div className="lx-card">
-              <div className="img-slot" style={{ marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}><img loading="lazy" decoding="async" src={semaVial.url} alt="Compounded Semaglutide vial" style={{ maxHeight: 300, width: "auto", objectFit: "contain" }} /></div>
+              <div className="img-slot" style={{ marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}><img loading="lazy" decoding="async" src={semaVial} alt="Compounded Semaglutide vial" style={{ maxHeight: 300, width: "auto", objectFit: "contain" }} /></div>
               <h3>Compounded Semaglutide - {semaText}/month</h3>
               <p className="lx-muted">
                 A GLP-1 receptor agonist that helps regulate appetite and blood sugar, supporting gradual, sustained
@@ -42,7 +42,7 @@ function MedicationsPage() {
               <Link className="btn btn-primary" to="/qualify">See if you qualify</Link>
             </div>
             <div className="lx-card">
-              <div className="img-slot" style={{ marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}><img loading="lazy" decoding="async" src={tirzVial.url} alt="Compounded Tirzepatide vial" style={{ maxHeight: 300, width: "auto", objectFit: "contain" }} /></div>
+              <div className="img-slot" style={{ marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}><img loading="lazy" decoding="async" src={tirzVial} alt="Compounded Tirzepatide vial" style={{ maxHeight: 300, width: "auto", objectFit: "contain" }} /></div>
               <h3>Compounded Tirzepatide - {tirzText}/month</h3>
               <p className="lx-muted">
                 A dual agonist that activates both GLP-1 and GIP receptors, offering maximum savings &amp; results for

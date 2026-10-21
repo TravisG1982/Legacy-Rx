@@ -244,9 +244,6 @@ async function trackCapi(payload: MetaEventPayload) {
 /** GA4 property for legacyrx.net. Overridable via env for other environments. */
 const GA4_MEASUREMENT_ID =
   (import.meta.env["VITE_GA4_MEASUREMENT_ID"] as string | undefined) ??
-  (import.meta.env["VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY"] as
-    | string
-    | undefined) ??
   "G-9S90Q8BPDW";
 
 let ga4Loaded = false;

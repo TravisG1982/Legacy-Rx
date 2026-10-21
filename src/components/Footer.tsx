@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { TrustBadges } from "./TrustBadges";
-import creamLogo from "../assets/legacyrx-cream.webp.asset.json";
+import creamLogo from "../assets/legacyrx-cream.webp";
 
 export function Footer() {
   return (
@@ -8,7 +8,7 @@ export function Footer() {
       <div className="container-lx">
         <div className="foot-grid">
           <div>
-            <img loading="lazy" decoding="async" src={creamLogo.url} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
+            <img loading="lazy" decoding="async" src={creamLogo} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
             <p style={{ marginTop: 12, fontStyle: "italic", fontFamily: "var(--display)", color: "rgba(239,230,218,.7)" }}>
               Building a Healthier Legacy.
             </p>

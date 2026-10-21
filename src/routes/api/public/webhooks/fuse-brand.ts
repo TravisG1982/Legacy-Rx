@@ -36,19 +36,31 @@ export const Route = createFileRoute("/api/public/webhooks/fuse-brand")({
         if (!secret || !(await verifyFuseSignature(request.headers.get("x-fuse-signature"), raw, secret))) {
           return new Response("Invalid signature", { status: 401 });
         }
-        const parsed = Body.safeParse(JSON.parse(raw));
+        let body: unknown;
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          return new Response("Bad payload", { status: 400 });
+        }
+        const parsed = Body.safeParse(body);
         if (!parsed.success) return new Response("Bad payload", { status: 400 });
         const { event, data } = parsed.data;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         const idem = request.headers.get("x-fuse-idempotency-key") ?? parsed.data.id;
         if (idem) {
-          const { error } = await supabaseAdmin.from("fuse_webhook_events").insert({ idempotency_key: idem, event });
-          if (error?.code === "23505") return Response.json({ received: true, duplicate: true });
+          const { data: previous, error } = await supabaseAdmin
+            .from("fuse_webhook_events")
+            .select("idempotency_key")
+            .eq("idempotency_key", idem)
+            .maybeSingle();
+          if (error) return new Response("Webhook storage unavailable", { status: 503 });
+          if (previous) return Response.json({ received: true, duplicate: true });
         }
 
         const orderId = s(data["orderId"]) ?? s(data["order_id"]);
         const sessionId = s(data["sessionId"]) ?? s(data["session_id"]) ?? s(data["checkoutSessionId"]);
+        if (!orderId && !sessionId) return new Response("Missing order identifier", { status: 400 });
         const patch: Record<string, unknown> = { fuzerx_last_event: `FuseHealth ${event}`.slice(0, 280) };
         if (STATUS[event]) patch["status"] = STATUS[event];
         if (orderId) patch["fuse_order_id"] = orderId;
@@ -61,10 +73,29 @@ export const Route = createFileRoute("/api/public/webhooks/fuse-brand")({
 
         let q = null;
         if (orderId) q = await supabaseAdmin.from("orders").update(patch as never).eq("fuse_order_id", orderId).select("id");
+        if (q?.error) {
+          console.error("FuseHealth webhook order update failed:", q.error);
+          return new Response("Order update unavailable", { status: 503 });
+        }
         if ((!q || !q.data?.length) && sessionId) {
           q = await supabaseAdmin.from("orders").update(patch as never).eq("fuse_session_id", sessionId).select("id");
         }
-        if (!q || !q.data?.length) console.log("FuseHealth webhook with no matching order:", event, orderId, sessionId);
+        if (q?.error) {
+          console.error("FuseHealth webhook order update failed:", q.error);
+          return new Response("Order update unavailable", { status: 503 });
+        }
+        if (!q?.data?.length) {
+          console.error("FuseHealth webhook with no matching order:", event, orderId, sessionId);
+          return new Response("Order not found yet", { status: 503 });
+        }
+        if (idem) {
+          const { error } = await supabaseAdmin.from("fuse_webhook_events").insert({ idempotency_key: idem, event });
+          if (error?.code === "23505") return Response.json({ received: true, duplicate: true });
+          if (error) {
+            console.error("FuseHealth webhook deduplication failed:", error);
+            return new Response("Webhook storage unavailable", { status: 503 });
+          }
+        }
         return Response.json({ received: true });
       },
     },

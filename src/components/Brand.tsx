@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import logo from "../assets/legacyrx-burgundy.webp.asset.json";
+import logo from "../assets/legacyrx-burgundy.webp";
 
 export function Wordmark({ cream = false }: { cream?: boolean }) {
   return (
@@ -10,7 +10,7 @@ export function Wordmark({ cream = false }: { cream?: boolean }) {
 }
 
 export function LogoMark({ alt = "LegacyRX" }: { alt?: string }) {
-  return <img loading="lazy" decoding="async" src={logo.url} alt={alt} style={{ height: 36, width: "auto", display: "block" }} />;
+  return <img loading="lazy" decoding="async" src={logo} alt={alt} style={{ height: 36, width: "auto", display: "block" }} />;
 }
 
 export function CtaBand() {

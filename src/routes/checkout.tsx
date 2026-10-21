@@ -1,4 +1,4 @@
-import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -18,9 +18,10 @@ import { logOrderFailure } from "../lib/order-failures.functions";
 import { setQuietMode } from "../lib/quiet-mode";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { createCheckoutSession, getCheckoutStatus } from "../lib/checkout-session.functions";
+import { LEGACY_STRIPE_CHECKOUT_ENABLED } from "../lib/legacy-stripe-checkout";
 import { OfferUrgency } from "@/components/OfferUrgency";
-import logo from "../assets/legacyrx-burgundy.webp.asset.json";
-import semaVial from "../assets/semaglutide-vial.webp.asset.json";
+import logo from "../assets/legacyrx-burgundy.webp";
+import semaVial from "../assets/semaglutide-vial.webp";
 
 
 export const Route = createFileRoute("/checkout")({
@@ -37,8 +38,19 @@ export const Route = createFileRoute("/checkout")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: CheckoutPage,
+  component: CheckoutRoute,
 });
+
+function CheckoutRoute() {
+  if (LEGACY_STRIPE_CHECKOUT_ENABLED) return <CheckoutPage />;
+  return (
+    <FunnelShell pct={100} wide hideTrust>
+      <h1 className="qcard-title">Start your order</h1>
+      <p className="qsub">This checkout is unavailable. Complete the assessment to continue to our secure FuseHealth form.</p>
+      <Link className="btn btn-primary" to="/qualify">Start assessment</Link>
+    </FunnelShell>
+  );
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -700,7 +712,7 @@ function CheckoutPage() {
       <div className="co-eyebrow">ORDER SUMMARY</div>
       <div className="co-prod">
         <img
-          src={PRODUCT_IMAGES[state.med] ?? semaVial.url}
+          src={PRODUCT_IMAGES[state.med] ?? semaVial}
           alt={`${product.name} vial`}
           loading="lazy"
           decoding="async"
@@ -869,7 +881,7 @@ function CheckoutPage() {
     return (
       <FunnelShell pct={100} wide hideTrust>
         <div className="ty-wrap">
-          <img src={logo.url} alt="LegacyRx" className="ty-logo" />
+          <img src={logo} alt="LegacyRx" className="ty-logo" />
           <div className="ty-check">✓</div>
           <h1 className="ty-title">ORDER SUCCESSFUL!</h1>
           <p className="ty-lead">

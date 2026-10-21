@@ -5,7 +5,7 @@ import { FUSE_PROGRAM_IDS, MED_KEYS, MEDS } from "./legacyrx-data";
 const Input = z.object({
   med: z.enum(MED_KEYS),
   leadSessionId: z.string().max(80).optional(),
-  email: z.string().email().max(255).optional(),
+  email: z.string().trim().email().max(255),
   firstName: z.string().max(80).optional(),
   lastName: z.string().max(80).optional(),
   phone: z.string().max(40).optional(),
@@ -33,27 +33,30 @@ export const createFuseCheckout = createServerFn({ method: "POST" })
     );
     const s = res.data;
 
-    if (data.email) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const plan = MEDS[data.med].plans[0]!;
-      await supabaseAdmin.from("orders").insert({
-        order_number: `LRX-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 900 + 100)}`,
-        session_id: data.leadSessionId ?? null,
-        email: data.email.toLowerCase(),
-        first_name: data.firstName ?? null,
-        last_name: data.lastName ?? null,
-        phone: data.phone ?? null,
-        state: data.state ?? null,
-        medication: data.med,
-        plan_id: plan.id,
-        product_id: programId,
-        product_name: MEDS[data.med].co,
-        subtotal: 0,
-        total: 0,
-        status: "pending_payment",
-        fuse_session_id: s.sessionId,
-        fuzerx_last_event: "FuseHealth checkout started",
-      } as never);
+    if (!s.sessionId || !s.embedUrl) throw new Error("FuseHealth did not return a checkout session.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const plan = MEDS[data.med].plans[0]!;
+    const { error } = await supabaseAdmin.from("orders").insert({
+      order_number: `LRX-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 900 + 100)}`,
+      session_id: data.leadSessionId ?? null,
+      email: data.email.toLowerCase(),
+      first_name: data.firstName ?? null,
+      last_name: data.lastName ?? null,
+      phone: data.phone ?? null,
+      state: data.state ?? null,
+      medication: data.med,
+      plan_id: plan.id,
+      product_id: programId,
+      product_name: MEDS[data.med].co,
+      subtotal: 0,
+      total: 0,
+      status: "pending_payment",
+      fuse_session_id: s.sessionId,
+      fuzerx_last_event: "FuseHealth checkout started",
+    } as never);
+    if (error) {
+      console.error("Could not save FuseHealth checkout session:", error);
+      throw new Error("We couldn't open the secure form. Please try again.");
     }
     return { embedUrl: s.embedUrl, sessionId: s.sessionId };
   });

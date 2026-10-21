@@ -3,7 +3,6 @@ import { isMedKey, MEDS } from "@/lib/legacyrx-data";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getStripeEnvironment } from "@/lib/stripe";
 import { createPortalSession, getMyAccount } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/_authenticated/account")({
@@ -37,30 +36,66 @@ function AccountPage() {
   const [data, setData] = useState<Account | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const sub =
+    data?.subscriptions.find((s) => ["active", "trialing", "past_due"].includes(s.status)) ??
+    data?.subscriptions[0];
 
   useEffect(() => {
-    load({ data: { environment: getStripeEnvironment() } }).then(setData, (e: Error) => setErr(e.message));
+    load().then(setData, () => setErr("Could not load your account. Please try again later."));
   }, [load]);
 
-  async function manage() {
-    setBusy(true);
-    const r = await portal({ data: { environment: getStripeEnvironment(), returnUrl: window.location.href } });
-    setBusy(false);
-    if ("error" in r) return setErr(r.error);
-    window.open(r.url, "_blank", "noopener");
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setErr("Could not sign out. Please try again.");
+      return;
+    }
+    void navigate({ to: "/" });
   }
 
-  const sub = data?.subscriptions[0];
-  const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : "—");
+  async function manage() {
+    if (!sub) return;
+    setBusy(true);
+    try {
+      const r = await portal({
+        data: { subscriptionId: sub.stripe_subscription_id, returnUrl: window.location.href },
+      });
+      if ("error" in r) return setErr(r.error);
+      window.open(r.url, "_blank", "noopener");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not open billing.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const fmt = (d?: string | null) =>
+    d
+      ? new Date(d).toLocaleDateString(undefined, {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "—";
 
   return (
     <div style={{ maxWidth: 760, margin: "40px auto", padding: "0 16px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
         <div>
           <h1 style={{ fontSize: "1.6rem", margin: 0 }}>My account</h1>
-          <p className="lx-muted" style={{ margin: "4px 0 0" }}>{data?.email}</p>
+          <p className="lx-muted" style={{ margin: "4px 0 0" }}>
+            {data?.email}
+          </p>
         </div>
-        <button className="btn btn-ghost" onClick={async () => { await supabase.auth.signOut(); void navigate({ to: "/" }); }}>
+        <button className="btn btn-ghost" onClick={() => void signOut()}>
           Sign out
         </button>
       </div>
@@ -68,14 +103,14 @@ function AccountPage() {
 
       <div className="co-box" style={{ marginTop: 20, padding: 20 }}>
         <h2 style={{ fontSize: "1.1rem", margin: "0 0 8px" }}>My plan</h2>
-        {!data ? (
+        {!data && !err ? (
           <p className="lx-muted">Loading…</p>
-        ) : !sub ? (
+        ) : data && !sub ? (
           <p className="lx-muted">No active plan on this account.</p>
-        ) : (
+        ) : sub ? (
           <>
             <p style={{ margin: "0 0 4px" }}>
-              <b>{(isMedKey(sub.medication) ? MEDS[sub.medication].name : "Treatment")} monthly</b> —{" "}
+              <b>{isMedKey(sub.medication) ? MEDS[sub.medication].name : "Treatment"} monthly</b> —{" "}
               {sub.status === "canceled"
                 ? "canceled"
                 : sub.cancel_at_period_end
@@ -85,26 +120,44 @@ function AccountPage() {
                     : `next charge ${fmt(sub.current_period_end)}`}
             </p>
             {sub.status !== "canceled" && (
-              <button className="btn btn-primary" style={{ marginTop: 10 }} disabled={busy} onClick={() => void manage()}>
+              <button
+                className="btn btn-primary"
+                style={{ marginTop: 10 }}
+                disabled={busy}
+                onClick={() => void manage()}
+              >
                 {busy ? "Opening…" : "Manage billing / cancel"}
               </button>
             )}
           </>
-        )}
+        ) : null}
       </div>
 
       <div className="co-box" style={{ marginTop: 16, padding: 20 }}>
         <h2 style={{ fontSize: "1.1rem", margin: "0 0 8px" }}>Orders</h2>
         {data && data.orders.length === 0 && <p className="lx-muted">No orders yet.</p>}
         {data?.orders.map((o) => (
-          <div key={o.order_number} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderTop: "1px solid var(--border, #eee)" }}>
+          <div
+            key={o.order_number}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: "10px 0",
+              borderTop: "1px solid var(--border, #eee)",
+            }}
+          >
             <div>
               <div style={{ fontWeight: 600 }}>{o.product_name}</div>
-              <div className="lx-muted" style={{ fontSize: ".8rem" }}>#{o.order_number} · {fmt(o.created_at)}</div>
+              <div className="lx-muted" style={{ fontSize: ".8rem" }}>
+                #{o.order_number} · {fmt(o.created_at)}
+              </div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div>${Number(o.total).toFixed(2)}</div>
-              <div className="lx-muted" style={{ fontSize: ".8rem" }}>{STATUS[o.status] ?? o.status}</div>
+              <div className="lx-muted" style={{ fontSize: ".8rem" }}>
+                {STATUS[o.status] ?? o.status}
+              </div>
             </div>
           </div>
         ))}

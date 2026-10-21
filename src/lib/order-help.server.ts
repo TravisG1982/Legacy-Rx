@@ -1,9 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
-const MODEL = "openai/gpt-6-astra";
-const RUN_ID = "X-Lovable-AIG-Run-ID";
+const MODEL = "gpt-5-mini";
 
 const SYSTEM = `You are the LegacyRx order helper. Customers tell you where they are stuck while ordering a treatment online.
 How ordering works: 1) Take the short assessment on legacyrx.net (Get started). 2) Pick a treatment. 3) You are taken to FuseHealth's secure form, where you answer health questions and pay. FuseHealth is the merchant of record and handles payment, refunds and cancellations. 4) A licensed provider usually reviews within about 1 day. 5) If approved, the pharmacy ships the medication. Order status can be checked on the account page after signing up with the same email.
@@ -11,25 +9,9 @@ Common fixes: refresh the page or start again from Get started (secure form link
 Rules: Give clear, numbered, practical next steps (max 5), plain words, under 150 words. Plain text only, no markdown or asterisks. Never give medical advice, dosing, eligibility, side-effect or drug-interaction guidance; for any health question say a licensed provider will answer it during review, and for urgent symptoms tell them to call 911. Never promise approval, refunds or delivery dates. Never invent prices, phone numbers or emails. If unresolved, suggest using the Contact page on legacyrx.net.`;
 
 export async function getOrderHelp(problem: string, step: string): Promise<string> {
-  const apiKey = process.env["LOVABLE_API_KEY"];
+  const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) throw new Error("Help is not available right now.");
-  let runId: string | undefined;
-  const provider = createOpenAI({
-    baseURL: GATEWAY,
-    apiKey,
-    headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    fetch: async (input, init) => {
-      const headers = new Headers(init?.headers);
-      if (runId) headers.set(RUN_ID, runId);
-      const res = await fetch(input, { ...init, headers });
-      runId ??= res.headers.get(RUN_ID) ?? undefined;
-      if (!res.ok) {
-        const body = await res.clone().text();
-        console.error(`Order help gateway error [${res.status}]: ${body.slice(0, 500)}`);
-      }
-      return res;
-    },
-  });
+  const provider = createOpenAI({ apiKey });
   const result = streamText({
     model: provider.responses(MODEL),
     system: SYSTEM,
@@ -37,10 +19,7 @@ export async function getOrderHelp(problem: string, step: string): Promise<strin
     providerOptions: {
       openai: {
         store: false,
-        forceReasoning: true,
         reasoningEffort: "low",
-        reasoningSummary: "auto",
-        include: ["reasoning.encrypted_content"],
       },
     },
   });

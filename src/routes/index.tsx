@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TrustBadges } from "../components/TrustBadges";
 import { Faq } from "../components/Faq";
-import heroImage from "../assets/legacy-rx-hero.webp.asset.json";
-import semaVial from "../assets/semaglutide-vial.webp.asset.json";
-import tirzVial from "../assets/tirzepatide-vial.webp.asset.json";
+import heroImage from "../assets/legacy-rx-hero.webp";
+import semaVial from "../assets/semaglutide-vial.webp";
+import tirzVial from "../assets/tirzepatide-vial.webp";
 import { CtaBand } from "../components/Brand";
 import { FAQS } from "../lib/legacyrx-data";
 import { useFromPrices } from "@/hooks/use-live-prices";
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Doctor-Guided GLP-1 Care, Built to Last. Flat monthly pricing." },
     ],
     links: [
-      { rel: "preload", as: "image", href: heroImage.url, fetchPriority: "high" },
+      { rel: "preload", as: "image", href: heroImage, fetchPriority: "high" },
     ],
   }),
   component: HomePage,
@@ -82,7 +82,7 @@ function HomePage() {
             </div>
           </div>
           <div className="hero-media">
-            <img fetchPriority="high" decoding="async" src={heroImage.url} alt="LegacyRx community members high-fiving in a park" style={{ width: "100%", height: "auto", borderRadius: 16, display: "block", objectFit: "cover" }} />
+            <img fetchPriority="high" decoding="async" src={heroImage} alt="LegacyRx community members high-fiving in a park" style={{ width: "100%", height: "auto", borderRadius: 16, display: "block", objectFit: "cover" }} />
             <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
               <TrustBadges />
             </div>
@@ -208,7 +208,7 @@ function HomePage() {
           <div className="plans" style={{ marginTop: 40 }}>
             <div className="plan featured">
               <span className="plan-pill">Most Popular</span>
-              <img loading="lazy" decoding="async" src={semaVial.url} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "0 auto 14px", height: 200, width: "auto", objectFit: "contain" }} />
+              <img loading="lazy" decoding="async" src={semaVial} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "0 auto 14px", height: 200, width: "auto", objectFit: "contain" }} />
               <h3>Compounded Semaglutide</h3>
               <div className="price">{semaText}<small>/month</small></div>
               <p className="lx-muted" style={{ fontSize: ".9rem" }}>Flat monthly pricing.</p>
@@ -222,7 +222,7 @@ function HomePage() {
               <Link className="btn btn-primary" style={{ width: "100%" }} to="/qualify">Select Plan</Link>
             </div>
             <div className="plan">
-              <img loading="lazy" decoding="async" src={tirzVial.url} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "0 auto 14px", height: 200, width: "auto", objectFit: "contain" }} />
+              <img loading="lazy" decoding="async" src={tirzVial} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "0 auto 14px", height: 200, width: "auto", objectFit: "contain" }} />
               <h3>Compounded Tirzepatide</h3>
               <div className="price">{tirzText}<small>/month</small></div>
               <p className="lx-muted" style={{ fontSize: ".9rem" }}>Maximum savings &amp; results.</p>

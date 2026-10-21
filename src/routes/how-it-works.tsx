@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CtaBand } from "../components/Brand";
-import boxImage from "../assets/legacyrx-box.webp.asset.json";
+import boxImage from "../assets/legacyrx-box.webp";
 
 export const Route = createFileRoute("/how-it-works")({
   head: () => ({
@@ -46,7 +46,7 @@ function HowItWorksPage() {
 
       <section className="lx" style={{ background: "var(--cream-warm)" }}>
         <div className="container-lx lx-grid grid-2" style={{ alignItems: "center" }}>
-          <img loading="lazy" decoding="async" src={boxImage.url} alt="LegacyRx branded shipping box" style={{ width: "100%", height: "auto", borderRadius: 16, display: "block", objectFit: "cover" }} />
+          <img loading="lazy" decoding="async" src={boxImage} alt="LegacyRx branded shipping box" style={{ width: "100%", height: "auto", borderRadius: 16, display: "block", objectFit: "cover" }} />
           <div>
             <h2>Everything Included. No Hidden Costs.</h2>
             <ul className="hero-points">

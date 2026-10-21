@@ -7,6 +7,8 @@ import { z } from "zod";
 import { totalWithCoupon, type CouponResult } from "./coupon";
 import { planPrice } from "./pricing-types";
 import { MED_KEYS, MEDS, productFor } from "./legacyrx-data";
+import { LEGACY_STRIPE_CHECKOUT_ENABLED } from "./legacy-stripe-checkout";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { OrderRow } from "./fulfill.server";
 
 const Input = z.object({
@@ -39,6 +41,9 @@ export type CheckoutSessionResult =
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => Input.parse(data))
   .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+    if (!LEGACY_STRIPE_CHECKOUT_ENABLED) {
+      return { error: "This checkout is unavailable. Please start your order through the assessment." };
+    }
     try {
       const { fetchLivePrices } = await import("./pricing.server");
       const { validateCouponServer } = await import("./coupon.server");
@@ -47,12 +52,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const { sweepAbandonedOrders } = await import("./orders.server");
       await sweepAbandonedOrders().catch(() => {});
 
-      // Link the order to the signed-in customer when a valid session is sent.
+      // A signed-in customer only owns a checkout using their confirmed email.
+      // A different checkout email remains a guest order until that address is verified.
       let userId: string | null = null;
       const auth = getRequestHeader("authorization");
       if (auth?.startsWith("Bearer ")) {
         const { data: u } = await supabaseAdmin.auth.getUser(auth.slice(7));
-        userId = u.user?.id ?? null;
+        if (u.user?.email_confirmed_at && u.user.email?.trim().toLowerCase() === data.email.trim().toLowerCase()) {
+          userId = u.user.id;
+        }
       }
 
       if (!MEDS[data.med].plans.some((p) => p.id === data.planId)) throw new Error("That plan isn't available for this product.");
@@ -194,15 +202,20 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
   });
 
 export const getCheckoutStatus = createServerFn({ method: "GET" })
-  .inputValidator((data: { sessionId: string }) => data)
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ sessionId: z.string().min(1) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { verifiedAccountEmail, sameVerifiedEmail } = await import("./account-access.server");
+    const email = await verifiedAccountEmail(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: order } = await supabaseAdmin
+    const { data: order, error } = await supabaseAdmin
       .from("orders")
-      .select("status, order_number, fuzerx_status, total")
+      .select("status, order_number, fuzerx_status, total, email")
       .eq("stripe_session_id", data.sessionId)
+      .eq("user_id", context.userId)
       .maybeSingle();
-    if (!order) return { found: false as const };
+    if (error) throw new Error("Could not load order status.");
+    if (!order || !sameVerifiedEmail(order.email, email)) return { found: false as const };
     return {
       found: true as const,
       status: order.status as string,
