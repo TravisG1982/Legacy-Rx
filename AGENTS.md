@@ -10,4 +10,4 @@
 
 - Use semantic medical-red and ivory brand tokens as the visual source of truth across shared pages and scoped campaign palettes. Why: the customer experience must maintain one consistent LegacyRx identity.
 - Blog articles live in the typed `blog-data.ts` catalog and render through one dynamic route. Why: listing cards, metadata, and article pages stay synchronized as content grows.
-- The order helper (`OrderHelp` in FunnelShell) calls the OpenAI API server-side via `askOrderHelp` with a fixed non-medical system prompt. Why: customers get stuck-point guidance without the app ever giving medical advice or exposing the AI key.
+- The order helper (`OrderHelp` in FunnelShell and the verified account) uses fixed, non-medical questions and answers. Specific order status is fetched from our database only after server-side authentication, verified-email, and ownership checks. Why: customer text and order details must not be sent to OpenAI.

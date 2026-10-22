@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { createPortalSession, getMyAccount } from "@/lib/account.functions";
+import { OrderHelp } from "@/components/OrderHelp";
+import { orderStatusMessage } from "@/lib/order-status";
 
 export const Route = createFileRoute("/_authenticated/account")({
   head: () => ({
@@ -21,13 +23,6 @@ export const Route = createFileRoute("/_authenticated/account")({
 });
 
 type Account = Awaited<ReturnType<typeof getMyAccount>>;
-
-const STATUS: Record<string, string> = {
-  paid: "Paid — with provider",
-  refunded: "Refunded",
-  abandoned: "Not completed",
-  payment_failed: "Payment failed",
-};
 
 function AccountPage() {
   const navigate = useNavigate();
@@ -156,12 +151,13 @@ function AccountPage() {
             <div style={{ textAlign: "right" }}>
               <div>${Number(o.total).toFixed(2)}</div>
               <div className="lx-muted" style={{ fontSize: ".8rem" }}>
-                {STATUS[o.status] ?? o.status}
+                {orderStatusMessage(o.status)}
               </div>
             </div>
           </div>
         ))}
       </div>
+      {data && <OrderHelp orderNumbers={data.orders.map((order) => order.order_number)} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * Health-category data minimization for browser Pixel hits.
+ * Health-category data minimization helpers. Browser Pixel is currently paused.
  *
  * Every fbq() hit automatically carries document.title (dt), the full URL (dl)
  * and the referrer (rl). Our SEO titles legitimately contain category terms
@@ -10,10 +10,9 @@
 export const HEALTH_CATEGORY_PATTERN =
   /glp\s*-?\s*1|semaglutide|tirzepatide|weight\s*-?\s*loss|weight\s*loss|compounded|telehealth|obesity|ozempic|wegovy|mounjaro|zepbound|medication|prescri(?:be|ption)|injection|dose|clinician|physician|doctor/i;
 
-
 const BRAND = "LegacyRX";
 
-/** One neutral title per public route. */
+/** One neutral title per public route, retained for any future Pixel review. */
 const ROUTE_TO_NEUTRAL_TITLE: Record<string, string> = {
   "/": BRAND,
   "/faq": `${BRAND} - FAQ`,
@@ -43,12 +42,12 @@ export function metaSafeTitle(pathname?: string): string {
   return ROUTE_TO_NEUTRAL_TITLE[path] ?? BRAND;
 }
 
-/** Origin + pathname only - no query string, no hash. */
+/** Neutral site origin only: no path, query string or hash. */
 export function metaSafeUrl(href?: string): string {
-  if (typeof window === "undefined") return "";
+  if (!href && typeof window === "undefined") return "";
   try {
     const url = new URL(href ?? window.location.href);
-    return `${url.origin}${url.pathname}`;
+    return `${url.origin}/`;
   } catch {
     return "";
   }

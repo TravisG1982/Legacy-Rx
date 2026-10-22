@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CONSENT_COOKIE } from "@/lib/analytics-consent";
 
 /**
  * Meta Conversions API relay.
@@ -13,14 +14,7 @@ import { createFileRoute } from "@tanstack/react-router";
 const GRAPH_VERSION = "v21.0";
 const FALLBACK_DATASET_ID = "1260936169249076";
 
-const ALLOWED_EVENTS = new Set([
-  "PageView",
-  "ViewContent",
-  "CompleteRegistration",
-  "AddToCart",
-  "InitiateCheckout",
-  "Purchase",
-]);
+const ALLOWED_EVENTS = new Set(["PageView"]);
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -67,6 +61,11 @@ export const Route = createFileRoute("/api/public/meta-capi")({
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
 
       POST: async ({ request }) => {
+        const consent = request.headers
+          .get("cookie")
+          ?.split(";")
+          .some((part) => part.trim() === `${CONSENT_COOKIE}=accepted`);
+        if (!consent) return json({ ok: false, error: "Analytics consent required" }, 403);
         const token = process.env["META_CAPI_TOKEN"];
         const datasetId = process.env["META_PIXEL_ID"] || FALLBACK_DATASET_ID;
         if (!token) {
@@ -107,11 +106,6 @@ export const Route = createFileRoute("/api/public/meta-capi")({
 
         if (externalId) user_data["external_id"] = await sha256Hex(externalId);
 
-        // Only the monetary value survives from custom_data.
-        const incomingCustom = (body["custom_data"] ?? {}) as Record<string, unknown>;
-        const rawValue = incomingCustom["value"];
-        const value = typeof rawValue === "number" && Number.isFinite(rawValue) ? rawValue : null;
-
         // Data freshness: trust the browser's own event_time when it is sane
         // (inside Meta's 7-day window, not meaningfully in the future).
         const now = Math.floor(Date.now() / 1000);
@@ -131,9 +125,7 @@ export const Route = createFileRoute("/api/public/meta-capi")({
         };
         const eventId = str(body["event_id"], 128);
         if (eventId) event["event_id"] = eventId;
-        const sourceUrl = str(body["event_source_url"], 1024);
-        if (sourceUrl) event["event_source_url"] = sourceUrl;
-        if (value !== null) event["custom_data"] = { currency: "USD", value };
+        event["event_source_url"] = `${new URL(request.url).origin}/`;
 
         const payload: Record<string, unknown> = { data: [event] };
         const testEventCode = str(body["test_event_code"], 64);

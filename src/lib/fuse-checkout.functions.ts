@@ -21,6 +21,8 @@ export const createFuseCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const programId = FUSE_PROGRAM_IDS[data.med];
     if (!programId) throw new Error("This treatment isn't available online yet.");
+    const { requireCompletedAssessment } = await import("./assessment.server");
+    await requireCompletedAssessment(data.med, data.email);
     const { fuseBrandFetch } = await import("./fuse-brand.server");
 
     const metadata: Record<string, string> = { med: data.med };

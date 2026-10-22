@@ -5,12 +5,12 @@
  * medication, plan or personal identity value is EVER sent to Meta. Only
  * anonymized identifiers plus a monetary value. See meta-payload.test.ts.
  *
- * Full internal detail (medication, plan, price) goes to GA4 instead.
+ * Only generic event names may leave the app after an explicit opt-in.
  */
 
-import { metaSafeUrl, withMetaSafeTitle } from "./meta-safe-title";
+import { metaSafeUrl } from "./meta-safe-title";
+import { hasAnalyticsConsent, isTrackingExcludedPage } from "./analytics-consent";
 
-export const META_PIXEL_ID = "1260936169249076";
 const CAPI_ENDPOINT = "/api/public/meta-capi";
 
 const EXTERNAL_ID_KEY = "lrx_external_id";
@@ -23,8 +23,6 @@ export type MetaEventName =
   | "AddToCart"
   | "InitiateCheckout"
   | "Purchase";
-
-export type MetaCustomData = { currency: "USD"; value: number };
 
 export type MetaUserData = {
   client_user_agent?: string;
@@ -40,7 +38,6 @@ export type MetaEventPayload = {
   event_source_url: string;
   action_source: "website";
   user_data: MetaUserData;
-  custom_data?: MetaCustomData;
   test_event_code?: string;
 };
 
@@ -87,7 +84,6 @@ export function ensureFbcCookie(): string {
     "; SameSite=Lax";
   return value;
 }
-
 
 /**
  * `fbp` is the primary deduplication key Meta compares between a browser Pixel
@@ -178,7 +174,6 @@ export function buildMetaPayload(
   eventName: MetaEventName,
   eventId: string,
   opts: {
-    value?: number;
     userData?: MetaUserData;
     sourceUrl?: string;
     testEventCode?: string;
@@ -189,18 +184,14 @@ export function buildMetaPayload(
   const payload: MetaEventPayload = {
     event_name: eventName,
     event_id: eventId,
-    event_source_url: opts.sourceUrl ?? metaSafeUrl(),
+    event_source_url: metaSafeUrl(opts.sourceUrl),
     action_source: "website",
     user_data: opts.userData ?? baseUserData(),
   };
   if (typeof opts.eventTime === "number" && Number.isFinite(opts.eventTime)) {
     payload.event_time = Math.floor(opts.eventTime);
   }
-  if (typeof opts.value === "number" && Number.isFinite(opts.value)) {
-    payload.custom_data = { currency: "USD", value: opts.value };
-  }
-  const testCode =
-    opts.testEventCode ?? (typeof window !== "undefined" ? getTestEventCode() : "");
+  const testCode = opts.testEventCode ?? (typeof window !== "undefined" ? getTestEventCode() : "");
   if (testCode) payload.test_event_code = testCode;
   return payload;
 }
@@ -210,19 +201,6 @@ export function newEventId(): string {
 }
 
 /* ---------------------------------------------------------------- transports */
-
-function fbq(): ((...args: unknown[]) => void) | undefined {
-  if (typeof window === "undefined") return undefined;
-  return (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq;
-}
-
-/** Browser Pixel hit, with the title/URL neutralized while it serializes. */
-function trackPixel(eventName: MetaEventName, eventId: string, value?: number) {
-  const f = fbq();
-  if (!f) return;
-  const custom = typeof value === "number" ? { currency: "USD", value } : {};
-  withMetaSafeTitle(() => f("track", eventName, custom, { eventID: eventId }));
-}
 
 /** Server-side Conversions API hit. Fire and forget. */
 async function trackCapi(payload: MetaEventPayload) {
@@ -243,10 +221,7 @@ async function trackCapi(payload: MetaEventPayload) {
 
 /** GA4 property for legacyrx.net. Overridable via env for other environments. */
 const GA4_MEASUREMENT_ID =
-  (import.meta.env["VITE_GA4_MEASUREMENT_ID"] as string | undefined) ??
-  "G-9S90Q8BPDW";
-
-let ga4Loaded = false;
+  (import.meta.env["VITE_GA4_MEASUREMENT_ID"] as string | undefined) ?? "G-9S90Q8BPDW";
 
 function gtag(...args: unknown[]) {
   if (typeof window === "undefined") return;
@@ -255,28 +230,17 @@ function gtag(...args: unknown[]) {
   w.dataLayer.push(args);
 }
 
-/** Loads gtag.js once, only when a measurement id is configured. */
-export function initGa4() {
-  if (typeof window === "undefined" || ga4Loaded || !GA4_MEASUREMENT_ID) return;
-  ga4Loaded = true;
-  const s = document.createElement("script");
-  s.async = true;
-  s.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_MEASUREMENT_ID}`;
-  document.head.appendChild(s);
-  gtag("js", new Date());
-  gtag("config", GA4_MEASUREMENT_ID, { send_page_view: false });
-}
-
-/** GA4 keeps the FULL picture - medication, plan, price, page path. */
-export function trackGa4(eventName: string, detail: Record<string, unknown> = {}) {
-  if (!GA4_MEASUREMENT_ID) return;
-  gtag("event", eventName, detail);
+/** Only the event name is queued. No answers, product, order, URL or title. */
+export function trackGa4(eventName: string, _detail: Record<string, unknown> = {}) {
+  if (!GA4_MEASUREMENT_ID || !hasAnalyticsConsent() || isTrackingExcludedPage(location.pathname))
+    return;
+  gtag("event", eventName);
 }
 
 /* -------------------------------------------------------- public trackers */
 
 export type FunnelDetail = {
-  /** Internal-only detail. Goes to GA4 and GTM, never to Meta. */
+  /** Accepted for existing call sites, but discarded by the analytics boundary. */
   medication?: string;
   medication_name?: string;
   plan_id?: string;
@@ -286,51 +250,47 @@ export type FunnelDetail = {
 };
 
 /**
- * Events that are still allowed to leave the browser through the Pixel.
- * The four conversion events are Conversions API only, by product decision.
+ * Browser Pixel is paused until its external configuration can be reviewed.
  */
-const BROWSER_PIXEL_EVENTS = new Set<MetaEventName>(["PageView", "ViewContent"]);
-
 export function isBrowserPixelEvent(eventName: MetaEventName): boolean {
-  return BROWSER_PIXEL_EVENTS.has(eventName);
+  void eventName;
+  return false;
 }
 
 /**
- * Fire one Meta event. PageView and ViewContent go through both transports with
- * a shared event_id, event_source_url and value so Meta dedupes the pair.
- * CompleteRegistration, AddToCart, InitiateCheckout and Purchase are sent
- * server-side ONLY - no Pixel copy leaves the browser for them.
- * No personal detail is ever attached - see buildMetaPayload.
+ * Send a generic event through our server relay only after analytics consent.
+ * Call-site details are deliberately ignored.
  */
 export function trackMeta(eventName: MetaEventName, detail: FunnelDetail = {}) {
-  if (typeof window === "undefined") return;
+  if (
+    typeof window === "undefined" ||
+    !hasAnalyticsConsent() ||
+    isTrackingExcludedPage(location.pathname)
+  )
+    return;
   const eventId = newEventId();
-  const monetary =
-    eventName === "AddToCart" ||
-    eventName === "InitiateCheckout" ||
-    eventName === "Purchase";
-  const value = monetary ? detail.value : undefined;
+  void detail;
   const sourceUrl = metaSafeUrl();
-
-  if (isBrowserPixelEvent(eventName)) {
-    trackPixel(eventName, eventId, value);
-  }
   void trackCapi(
     buildMetaPayload(eventName, eventId, {
-      value,
       sourceUrl,
       eventTime: Math.floor(Date.now() / 1000),
     }),
   );
 }
 
-
-/** Push to the existing GTM dataLayer (full internal detail, unchanged). */
+/** Queue only generic event names; no external GTM script is loaded at present. */
 export function pushDataLayer(payload: Record<string, unknown>) {
-  if (typeof window === "undefined") return;
+  if (
+    typeof window === "undefined" ||
+    !hasAnalyticsConsent() ||
+    isTrackingExcludedPage(location.pathname)
+  )
+    return;
+  if (typeof payload.event !== "string") return;
   const w = window as unknown as { dataLayer?: Record<string, unknown>[] };
   w.dataLayer = w.dataLayer || [];
-  w.dataLayer.push(payload);
+  w.dataLayer.push({ event: payload.event });
 }
 
 /** Meta event name -> GA4 recommended event name. */
@@ -343,49 +303,15 @@ const META_TO_GA4: Record<MetaEventName, string> = {
   Purchase: "purchase",
 };
 
-const GA4_MONETARY = new Set<MetaEventName>([
-  "AddToCart",
-  "InitiateCheckout",
-  "Purchase",
-]);
-
-function buildGa4Params(
-  eventName: MetaEventName,
-  detail: FunnelDetail & Record<string, unknown>,
-): Record<string, unknown> {
-  const params: Record<string, unknown> = { ...detail };
-  if (GA4_MONETARY.has(eventName)) {
-    params["value"] = typeof detail.value === "number" ? detail.value : 0;
-    params["currency"] = (detail["currency"] as string | undefined) ?? "USD";
-    if (eventName === "Purchase" && !params["transaction_id"]) {
-      params["transaction_id"] = newEventId();
-    }
-  } else {
-    delete params["value"];
-    delete params["currency"];
-  }
-  return params;
-}
-
 /**
- * One call per funnel event: GTM + GA4 get the full detail (GA4 under its own
- * recommended event names), Meta gets the minimized payload built from
- * `detail.value` only.
+ * Keep generic event names only. Third-party browser tags are paused.
  */
 export function trackFunnelEvent(
   eventName: MetaEventName,
   detail: FunnelDetail & Record<string, unknown> = {},
 ) {
-  pushDataLayer({ event: eventName, ...detail });
-  trackGa4(META_TO_GA4[eventName], buildGa4Params(eventName, detail));
-  trackMeta(eventName, detail);
-}
-
-// Run at load - by the time a conversion fires, the fbclid is long gone, and
-// both transports must already agree on the fbp/external_id dedup keys.
-if (typeof window !== "undefined") {
-  ensureFbpCookie();
-  ensureFbcCookie();
-  getExternalId();
-  getTestEventCode();
+  void detail;
+  pushDataLayer({ event: eventName });
+  trackGa4(META_TO_GA4[eventName]);
+  trackMeta(eventName);
 }

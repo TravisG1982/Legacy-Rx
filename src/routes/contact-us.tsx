@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { submitContactMessage } from "@/lib/contact.functions";
 
@@ -7,7 +7,7 @@ export const Route = createFileRoute("/contact-us")({
   head: () => ({
     meta: [
       { title: "Contact Us - LegacyRX" },
-      { name: "description", content: "Questions about LegacyRX treatments, delivery, or prescriptions? Call, email, or send us a message and our support team will reply." },
+      { name: "description", content: "Contact LegacyRX support about your account, billing, orders, delivery, or other general service questions." },
       { property: "og:title", content: "Contact Us - LegacyRX" },
       { property: "og:description", content: "Reach the LegacyRX support team by phone, email, or message form." },
       { property: "og:type", content: "website" },
@@ -34,6 +34,8 @@ function ContactPage() {
   const [captchaInput, setCaptchaInput] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
+  const submissionId = useRef<string | null>(null);
 
   const refresh = useCallback(() => {
     setCaptcha(newCaptcha());
@@ -49,6 +51,8 @@ function ContactPage() {
     if (k === "email") v = v.slice(0, 255);
     if (k === "message") v = v.slice(0, 4000);
     setForm((f) => ({ ...f, [k]: v }));
+    submissionId.current = null;
+    setSubmissionNotice(null);
     setErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev));
   };
 
@@ -73,8 +77,10 @@ function ContactPage() {
 
     setStatus("sending");
     try {
-      await submitContactMessage({
+      submissionId.current ??= crypto.randomUUID();
+      const result = await submitContactMessage({
         data: {
+          submissionId: submissionId.current,
           name: form.name.trim(),
           email: form.email.trim(),
           phone: form.phone.trim(),
@@ -83,15 +89,32 @@ function ContactPage() {
           marketingConsent: mkConsent,
         },
       });
+      if (!result.ok) {
+        setStatus("error");
+        if (result.reason === "medical_details") {
+          setSubmissionNotice("Please remove medical details. This form is for general support only.");
+          toast.error("This form is for general support only. Please remove medical details.", { duration: 6000 });
+        } else if (result.reason === "delivery_pending") {
+          setSubmissionNotice("Your message is still being processed. Please check again shortly.");
+          toast.error("Your message is still being processed. Please wait before checking again.", { duration: 6000 });
+        } else {
+          setSubmissionNotice(`Delivery could not be confirmed. Please email support@legacyrx.net without medical details and mention reference ${submissionId.current}. Do not resubmit this message.`);
+          toast.error("We couldn't confirm delivery. Please email support@legacyrx.net without medical details. Do not resubmit this message.", { duration: 7000 });
+        }
+        return;
+      }
       setStatus("sent");
+      setSubmissionNotice(null);
+      submissionId.current = null;
       setForm({ name: "", email: "", phone: "", message: "" });
       setTxConsent(false);
       setMkConsent(false);
       refresh();
-      toast.success("Thanks, we received your message and will reply shortly.", { duration: 5000 });
+      toast.success("The form service accepted your message.", { duration: 5000 });
       setTimeout(() => setStatus("idle"), 5000);
     } catch {
       setStatus("error");
+      setSubmissionNotice("We couldn't process your message. Please try again or email support@legacyrx.net without medical details.");
       toast.error("Something went wrong. Please email support@legacyrx.net.", { duration: 5000 });
     }
   }
@@ -105,6 +128,7 @@ function ContactPage() {
             <h1 className="contact-title">
               Contact <em>us</em>.
             </h1>
+            <p>For account, payment, order, delivery, and other general support questions.</p>
             <ul className="contact-list">
               <li>
                 <span className="ci-ico" aria-hidden="true">&#9742;</span>
@@ -112,7 +136,10 @@ function ContactPage() {
               </li>
               <li>
                 <span className="ci-ico" aria-hidden="true">&#9993;</span>
-                <a href="mailto:support@legacyrx.net">support@legacyrx.net</a>
+                <span>
+                  <a href="mailto:support@legacyrx.net">support@legacyrx.net</a>
+                  <small style={{ display: "block" }}>For general support only. Do not email symptoms, medical history, treatment details, or other health information.</small>
+                </span>
               </li>
               <li>
                 <span className="ci-ico" aria-hidden="true">&#9906;</span>
@@ -126,6 +153,7 @@ function ContactPage() {
                 </span>
               </li>
             </ul>
+            <p className="lx-muted">If you need help reaching your care team, ask us without including medical details.</p>
           </div>
 
           <form className="contact-form" onSubmit={onSubmit} noValidate>
@@ -148,12 +176,13 @@ function ContactPage() {
             </div>
             <div className="field">
               <label htmlFor="cf-message">Message <span className="req">*</span></label>
-              <textarea id="cf-message" rows={6} value={form.message} onChange={set("message")} className={errors.message ? "invalid" : ""} />
+              <textarea id="cf-message" rows={6} value={form.message} onChange={set("message")} aria-describedby="cf-message-note" className={errors.message ? "invalid" : ""} />
+              <p className="lx-muted" id="cf-message-note">For general support only. Do not include symptoms, diagnoses, medical history, test results, medication details, or other health information.</p>
               {errors.message && <p className="field-error">{errors.message}</p>}
             </div>
 
             <label className="cf-consent">
-              <input type="checkbox" checked={txConsent} onChange={(e) => setTxConsent(e.target.checked)} />
+              <input type="checkbox" checked={txConsent} onChange={(e) => { setTxConsent(e.target.checked); submissionId.current = null; setSubmissionNotice(null); }} />
               <span>
                 I consent to receive transactional text messages from LegacyRX regarding my account, including reminders
                 to complete my signup, order updates, and support messages. Message &amp; data rates may apply. Reply
@@ -161,7 +190,7 @@ function ContactPage() {
               </span>
             </label>
             <label className="cf-consent">
-              <input type="checkbox" checked={mkConsent} onChange={(e) => setMkConsent(e.target.checked)} />
+              <input type="checkbox" checked={mkConsent} onChange={(e) => { setMkConsent(e.target.checked); submissionId.current = null; setSubmissionNotice(null); }} />
               <span>
                 I consent to receive marketing text messages from LegacyRX regarding promotions and special offers.
                 Message frequency varies. Message and data rates may apply. Reply HELP for assistance or STOP to opt
@@ -197,6 +226,7 @@ function ContactPage() {
             <button type="submit" className="btn btn-primary cf-submit" disabled={status === "sending"}>
               {status === "sending" ? "Sending..." : status === "sent" ? "Message sent" : "Submit"}
             </button>
+            {submissionNotice && <p className="field-error" role="alert">{submissionNotice}</p>}
           </form>
         </div>
       </div>

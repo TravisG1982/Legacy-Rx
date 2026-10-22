@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,6 +15,7 @@ import { LiveViewers, SpotsLeft, StickyUrgency } from "@/components/PlanUrgency"
 
 import { ReviewingResponses } from "@/components/ReviewingResponses";
 import { EMAIL_RE, commitStep1, focusFirstStep1Error, validateStep1Fields, type Step1Errors } from "../lib/qualify-step1";
+import { getAssessmentProgress, invalidateAssessment, submitAssessmentStep1, submitAssessmentStep2 } from "../lib/assessment.functions";
 import { resolveCampaignCoupon, totalWithCoupon, type CouponResult } from "../lib/coupon";
 
 
@@ -57,7 +59,7 @@ const money = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 
-// GTM + GA4 get full detail; Meta only ever receives the minimized payload.
+// Analytics receives only generic event names, never screening answers.
 
 
 
@@ -65,10 +67,17 @@ const money = (n: number) =>
 function QualifyPage() {
   const navigate = useNavigate({ from: "/qualify" });
   const search = Route.useSearch();
-  const step: FunnelStep = search.step ?? 1;
   const requestedTrack: Track = search.track ?? "glp1";
   // A program with no orderable products falls back to weight loss.
   const track: Track = medsForTrack(requestedTrack).length ? requestedTrack : "glp1";
+  const getProgress = useServerFn(getAssessmentProgress);
+  const submitStep1 = useServerFn(submitAssessmentStep1);
+  const submitStep2 = useServerFn(submitAssessmentStep2);
+  const clearProgress = useServerFn(invalidateAssessment);
+  const [verifiedState, setVerifiedState] = useState<{ track: Track; step: FunnelStep } | null>(null);
+  const verifiedStep = verifiedState?.track === track ? verifiedState.step : null;
+  const [submitting, setSubmitting] = useState(false);
+  const step: FunnelStep = verifiedStep === null ? 1 : Math.min(search.step ?? 1, verifiedStep) as FunnelStep;
   const trackMeds = medsForTrack(track);
   const conditionList = track === "glp1" ? CONTRAINDICATIONS : HORMONE_CONTRAINDICATIONS[track];
   // Hormone programs: recent blood work answer (doctor orders labs if none).
@@ -82,9 +91,10 @@ function QualifyPage() {
   const [phone, setPhone] = useState("");
   const [age18, setAge18] = useState<string | null>(null);
   const [onGlp1, setOnGlp1] = useState<string | null>(null);
-  const [emailConsent, setEmailConsent] = useState(true);
-  const [smsConsent, setSmsConsent] = useState(true);
-  const [smsMarketing, setSmsMarketing] = useState(true);
+  const [emailConsent, setEmailConsent] = useState(false);
+  const [emailMarketingConsent, setEmailMarketingConsent] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [smsMarketing, setSmsMarketing] = useState(false);
   const [errors1, setErrors1] = useState<Step1Errors>({});
   const [gateEmail, setGateEmail] = useState("");
   const [gateDone, setGateDone] = useState(false);
@@ -104,6 +114,26 @@ function QualifyPage() {
   // Campaign discount carried in from a link that includes a promo code.
   const [campaignCoupon, setCampaignCoupon] = useState<CouponResult | null>(null);
   const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    setVerifiedState(null);
+    getProgress({ data: track })
+      .then(({ step: allowed }) => {
+        if (!active) return;
+        setVerifiedState({ track, step: allowed });
+      })
+      .catch(() => {
+        if (active) setVerifiedState({ track, step: 1 });
+      });
+    return () => { active = false; };
+  }, [track, getProgress]);
+
+  useEffect(() => {
+    if (verifiedStep !== null && (search.step ?? 1) > verifiedStep) {
+      navigate({ search: (prev) => ({ ...prev, step: verifiedStep === 1 ? undefined : verifiedStep }), replace: true });
+    }
+  }, [search.step, verifiedStep, navigate]);
 
 
   const pct = step * 25;
@@ -168,9 +198,13 @@ function QualifyPage() {
     if (answers) {
       setAge18(answers.age18 ?? null);
       setOnGlp1(answers.onGlp1 ?? null);
-      setEmailConsent(answers.emailConsent ?? true);
-      setSmsConsent(answers.smsConsent ?? true);
-      setSmsMarketing(answers.smsMarketing ?? true);
+      // Older saved answers used preselected marketing boxes. Only restore
+      // consent choices made with the new separate, opt-in controls.
+      const currentConsent = answers.consentVersion === 2;
+      setEmailConsent(currentConsent ? (answers.emailConsent ?? false) : false);
+      setEmailMarketingConsent(currentConsent ? (answers.emailMarketingConsent ?? false) : false);
+      setSmsConsent(currentConsent ? (answers.smsConsent ?? false) : false);
+      setSmsMarketing(currentConsent ? (answers.smsMarketing ?? false) : false);
       setNone(answers.none ?? false);
       setConds(new Set(answers.conditions ?? []));
     }
@@ -202,10 +236,11 @@ function QualifyPage() {
       age18,
       onGlp1,
       emailConsent,
+      emailMarketingConsent,
       smsTransactionalConsent: smsConsent,
       smsMarketingConsent: smsMarketing,
     });
-  }, [step, firstName, lastName, email, phone, state, age18, onGlp1, emailConsent, smsConsent, smsMarketing]);
+  }, [step, firstName, lastName, email, phone, state, age18, onGlp1, emailConsent, emailMarketingConsent, smsConsent, smsMarketing]);
 
   useEffect(() => {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -226,16 +261,19 @@ function QualifyPage() {
     });
   }
 
-  function validateStep1() {
+  async function validateStep1() {
+    if (submitting || verifiedStep === null) return;
     // If user explicitly answered "no" to age, disqualify immediately.
     if (age18 === "no") {
+      try { await clearProgress(); } catch { toast.error("Please try again."); return; }
+      setVerifiedState({ track, step: 1 });
       saveLeadNow({ age18: "no", stage: "not_eligible" });
       navigate({ to: "/not-eligible" });
       return;
     }
 
     const values = {
-      state, firstName, lastName, email, phone, age18, onGlp1, emailConsent, smsConsent, smsMarketing,
+      state, firstName, lastName, email, phone, age18, onGlp1, emailConsent, emailMarketingConsent, smsConsent, smsMarketing,
     };
     const e = validateStep1Fields(values);
     setErrors1(e);
@@ -243,8 +281,23 @@ function QualifyPage() {
       focusFirstStep1Error(e);
       return;
     }
-    commitStep1(values);
-    navigate({ search: (prev) => ({ ...prev, step: 2 }) });
+    setSubmitting(true);
+    try {
+      await submitStep1({ data: {
+        ...values,
+        track,
+        age18: age18 as "yes",
+        onGlp1: onGlp1 as "yes" | "no",
+        emailConsent: emailConsent as true,
+      } });
+      commitStep1(values);
+      setVerifiedState({ track, step: 2 });
+      navigate({ search: (prev) => ({ ...prev, step: 2 }) });
+    } catch {
+      toast.error("We couldn't save your assessment. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const finishReview = useCallback(() => {
@@ -252,7 +305,8 @@ function QualifyPage() {
     navigate({ search: (prev) => ({ ...prev, step: 3 }) });
   }, [navigate]);
 
-  function validateStep2() {
+  async function validateStep2() {
+    if (submitting || verifiedStep === null || verifiedStep < 2) return;
     if (none) {
       if (track !== "glp1" && track !== "sh" && !labs) {
         setStep2Error("Please tell us about recent blood work.");
@@ -265,13 +319,24 @@ function QualifyPage() {
         `Currently on hormone medication: ${onGlp1 ?? "not answered"}.`,
         ...(track === "sh" ? [] : [`Blood work in past 6 months: ${labs}.`]),
       ].join(" ");
-      writeFunnel({ answers: { none: true, conditions: [], intake }, latestStep: 3 });
-      saveLeadNow({ stage: "plan_selection" });
-      setReviewing(true);
+      setSubmitting(true);
+      try {
+        await submitStep2({ data: { track, none: true, conditions: [...conds], labs: labs === "yes" || labs === "no" ? labs : null } });
+        writeFunnel({ answers: { none: true, conditions: [], intake }, latestStep: 3 });
+        saveLeadNow({ stage: "plan_selection" });
+        setVerifiedState({ track, step: 3 });
+        setReviewing(true);
+      } catch {
+        setStep2Error("We couldn't save your screening. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
     // User selected one or more contraindications, or selected nothing.
     if (conds.size > 0) {
+      try { await clearProgress(); } catch { setStep2Error("Please try again."); return; }
+      setVerifiedState({ track, step: 1 });
       saveLeadNow({ stage: "not_eligible" });
       navigate({ to: "/not-eligible" });
       return;
@@ -303,6 +368,10 @@ function QualifyPage() {
   }
 
 
+  if (verifiedStep === null) {
+    return <FunnelShell pct={25} wide={false}><p className="qsub">Checking your assessment…</p></FunnelShell>;
+  }
+
   return (
     <FunnelShell pct={pct} wide={false}>
       <ReviewingResponses open={reviewing} onDone={finishReview} />
@@ -313,10 +382,6 @@ function QualifyPage() {
             e.preventDefault();
             const v = gateEmail.trim();
             if (!EMAIL_RE.test(v) || v.length > 255) { setGateError("Enter a valid email address."); return; }
-            const w = window as unknown as { _learnq?: unknown[] };
-            w._learnq = w._learnq || [];
-            w._learnq.push(["identify", { $email: v }]);
-            w._learnq.push(["track", "Started Assessment", { source: "qualify_page" }]);
             writeFunnel({ contact: { email: v } });
             setEmail(v);
             setGateDone(true);
@@ -395,11 +460,20 @@ function QualifyPage() {
               onChange={(e) => { setEmailConsent(e.target.checked); setErrors1((p) => ({ ...p, emailConsent: undefined })); }}
             />
             <span>
-              I agree to receive doctor correspondence, transactional emails, and/or marketing emails from LegacyRX at
-              the email address provided above.
+              I understand that LegacyRX will email me about my assessment, clinician correspondence,
+              account, and order at the address above. These emails are needed to complete my request.
             </span>
           </label>
           {errors1.emailConsent && <div className="field-error">{errors1.emailConsent}</div>}
+
+          <label className="check-row" style={{ margin: "4px 0 16px" }}>
+            <input
+              type="checkbox"
+              checked={emailMarketingConsent}
+              onChange={(e) => setEmailMarketingConsent(e.target.checked)}
+            />
+            <span>I would also like to receive optional marketing emails from LegacyRX. This is not required to continue.</span>
+          </label>
 
           <div className="field" data-field="phone">
             <label>Phone Number</label>
@@ -431,7 +505,7 @@ function QualifyPage() {
             <input
               type="checkbox"
               checked={smsConsent}
-              onChange={(e) => { setSmsConsent(e.target.checked); setErrors1((p) => ({ ...p, smsConsent: undefined })); }}
+              onChange={(e) => setSmsConsent(e.target.checked)}
             />
             <span>
               I consent to receive transactional text messages from LegacyRX regarding my account, including reminders
@@ -439,7 +513,6 @@ function QualifyPage() {
               to opt out, HELP for help. Consent is not a condition of purchase.
             </span>
           </label>
-          {errors1.smsConsent && <div className="field-error">{errors1.smsConsent}</div>}
 
           <label className="check-row" style={{ marginTop: 12 }}>
             <input
@@ -460,8 +533,8 @@ function QualifyPage() {
             <Link to="/terms-of-use" style={{ textDecoration: "underline" }}>Terms</Link>.
           </p>
           <div className="funnel-sticky-bar">
-            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={validateStep1}>
-              Continue
+            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={validateStep1} disabled={submitting}>
+              {submitting ? "Saving…" : "Continue"}
             </button>
           </div>
 
@@ -505,7 +578,7 @@ function QualifyPage() {
           {step2Error && <div className="field-error" style={{ marginTop: 10 }}>{step2Error}</div>}
           <div className="funnel-sticky-bar">
             <button type="button" className="btn btn-ghost" onClick={() => navigate({ search: (prev) => ({ ...prev, step: undefined }) })}>← Back</button>
-            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={validateStep2}>Continue</button>
+            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={validateStep2} disabled={submitting}>{submitting ? "Saving…" : "Continue"}</button>
           </div>
         </div>
       )}
@@ -513,8 +586,8 @@ function QualifyPage() {
       {step === 3 && (
         <div>
           <div className="qualify-banner">
-            <div style={{ fontFamily: "var(--display)", fontSize: "1.3rem" }}>🎉 You Qualify!</div>
-            <div style={{ fontSize: ".9rem", opacity: 0.92 }}>Select your treatment plan below</div>
+            <div style={{ fontFamily: "var(--display)", fontSize: "1.3rem" }}>Assessment complete</div>
+            <div style={{ fontSize: ".9rem", opacity: 0.92 }}>Choose a plan to continue. A licensed clinician will review your full application and decide whether treatment is appropriate.</div>
           </div>
           <OfferUrgency variant="plan" />
           <LiveViewers />

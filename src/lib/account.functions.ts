@@ -15,7 +15,8 @@ export const getMyAccount = createServerFn({ method: "GET" })
     const email = await verifiedAccountEmail(userId);
     // Orders are matched by the verified account email (checkout doesn't require sign-in).
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const orderColumns = "order_number, product_name, total, status, fuzerx_status, created_at, is_renewal, email";
+    const orderColumns =
+      "order_number, product_name, total, status, fuzerx_status, created_at, is_renewal, email";
     const [linkedOrders, subs] = await Promise.all([
       supabaseAdmin
         .from("orders")
@@ -27,7 +28,9 @@ export const getMyAccount = createServerFn({ method: "GET" })
         .limit(50),
       supabaseAdmin
         .from("subscriptions")
-        .select("stripe_subscription_id, medication, status, current_period_end, cancel_at_period_end, price_id, created_at, environment, email")
+        .select(
+          "stripe_subscription_id, medication, status, current_period_end, cancel_at_period_end, price_id, created_at, environment, email",
+        )
         .eq("user_id", userId)
         .ilike("email", emailPattern(email))
         .order("created_at", { ascending: false })
@@ -35,8 +38,25 @@ export const getMyAccount = createServerFn({ method: "GET" })
     ]);
     if (linkedOrders.error) throw new Error("Could not load your orders.");
     if (subs.error) throw new Error("Could not load your plan.");
-    const orders = (linkedOrders.data ?? []).filter((order) => sameVerifiedEmail(order.email, email));
-    return { email, orders, subscriptions: (subs.data ?? []).filter((sub) => sameVerifiedEmail(sub.email, email)) };
+    const orders = (linkedOrders.data ?? []).filter((order) =>
+      sameVerifiedEmail(order.email, email),
+    );
+    return {
+      email,
+      orders,
+      subscriptions: (subs.data ?? []).filter((sub) => sameVerifiedEmail(sub.email, email)),
+    };
+  });
+
+/** Each status request independently verifies the account email and order ownership. */
+export const getMyOrderStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ orderNumber: z.string().trim().min(1).max(64) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { loadVerifiedOrderStatus } = await import("./account-order-status.server");
+    return loadVerifiedOrderStatus(context.userId, data.orderNumber);
   });
 
 export const createPortalSession = createServerFn({ method: "POST" })

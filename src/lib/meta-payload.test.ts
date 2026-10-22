@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { buildMetaPayload, isBrowserPixelEvent, type MetaEventPayload } from "./analytics";
 import { HEALTH_CATEGORY_PATTERN } from "./meta-safe-title";
 
-
 /**
  * Data-minimization guard. If someone widens the Meta payload later, this fails.
  */
@@ -14,20 +13,13 @@ const ALLOWED_TOP_LEVEL = new Set([
   "event_source_url",
   "action_source",
   "user_data",
-  "custom_data",
   "test_event_code",
 ]);
 
-const ALLOWED_USER_DATA = new Set([
-  "client_user_agent",
-  "fbp",
-  "fbc",
-  "external_id",
-]);
+const ALLOWED_USER_DATA = new Set(["client_user_agent", "fbp", "fbc", "external_id"]);
 
 function payload(): MetaEventPayload {
   return buildMetaPayload("AddToCart", "evt-1", {
-    value: 897,
     sourceUrl: "https://legacyrx.net/qualify",
     userData: { client_user_agent: "UA", fbp: "fb.1.1.1", external_id: "abc" },
   });
@@ -46,8 +38,8 @@ describe("Meta payload minimization", () => {
     }
   });
 
-  it("limits custom_data to currency and value", () => {
-    expect(payload().custom_data).toEqual({ currency: "USD", value: 897 });
+  it("does not include a monetary value that could imply a product", () => {
+    expect("custom_data" in payload()).toBe(false);
   });
 
   it("carries no health-category term anywhere", () => {
@@ -56,14 +48,14 @@ describe("Meta payload minimization", () => {
 
   it("omits custom_data for non-monetary events", () => {
     const p = buildMetaPayload("PageView", "evt-2", { sourceUrl: "https://legacyrx.net/" });
-    expect(p.custom_data).toBeUndefined();
+    expect("custom_data" in p).toBe(false);
   });
 
   it("strips query strings from the source url it is given", () => {
     const p = buildMetaPayload("PageView", "evt-3", {
-      sourceUrl: "https://legacyrx.net/qualify",
+      sourceUrl: "https://legacyrx.net/start/sema?email=patient%40example.com",
     });
-    expect(p.event_source_url).not.toContain("?");
+    expect(p.event_source_url).toBe("https://legacyrx.net/");
   });
 
   it("keeps the client event_time it is given", () => {
@@ -76,13 +68,11 @@ describe("Meta payload minimization", () => {
     const fbc = `fb.1.1700000000000.${fbclid}`;
     expect(fbc.length).toBeGreaterThan(300);
     const p = buildMetaPayload("AddToCart", "evt-5", {
-      value: 897,
       sourceUrl: "https://legacyrx.net/checkout",
       userData: { client_user_agent: "UA", fbp: "fb.1.1.1", fbc, external_id: "abc" },
     });
     expect(p.user_data.fbc).toBe(fbc);
   });
-
 
   it("carries no contact or address key on any event", () => {
     const forbidden = [
@@ -116,44 +106,40 @@ describe("Meta payload minimization", () => {
     ] as const;
     for (const name of events) {
       const p = buildMetaPayload(name, "evt", {
-        value: 897,
         sourceUrl: "https://legacyrx.net/checkout",
         userData: { client_user_agent: "UA", fbp: "fb.1.1.1", external_id: "abc" },
       });
-      const keys = [
-        ...Object.keys(p),
-        ...Object.keys(p.user_data),
-        ...Object.keys(p.custom_data ?? {}),
-      ];
+      const keys = [...Object.keys(p), ...Object.keys(p.user_data)];
       for (const bad of forbidden) {
         expect(keys.includes(bad), `${name} leaked ${bad}`).toBe(false);
       }
     }
-});
-
-describe("transport routing", () => {
-  it("keeps PageView and ViewContent on the browser Pixel", () => {
-    expect(isBrowserPixelEvent("PageView")).toBe(true);
-    expect(isBrowserPixelEvent("ViewContent")).toBe(true);
   });
 
-  it("sends the four conversion events server-side only", () => {
-    for (const name of [
-      "CompleteRegistration",
-      "AddToCart",
-      "InitiateCheckout",
-      "Purchase",
-    ] as const) {
-      expect(isBrowserPixelEvent(name), `${name} must not fire in the browser`).toBe(false);
-    }
-  });
-});
+  describe("transport routing", () => {
+    it("does not send any events through browser Pixel", () => {
+      expect(isBrowserPixelEvent("PageView")).toBe(false);
+      expect(isBrowserPixelEvent("ViewContent")).toBe(false);
+    });
 
+    it("sends the four conversion events server-side only", () => {
+      for (const name of [
+        "CompleteRegistration",
+        "AddToCart",
+        "InitiateCheckout",
+        "Purchase",
+      ] as const) {
+        expect(isBrowserPixelEvent(name), `${name} must not fire in the browser`).toBe(false);
+      }
+    });
+  });
 });
 
 describe("health category pattern", () => {
   it("matches the real SEO titles we must neutralize", () => {
-    expect(HEALTH_CATEGORY_PATTERN.test("LegacyRX.net | Physician-Led Medical Weight Loss")).toBe(true);
+    expect(HEALTH_CATEGORY_PATTERN.test("LegacyRX.net | Physician-Led Medical Weight Loss")).toBe(
+      true,
+    );
     expect(HEALTH_CATEGORY_PATTERN.test("Semaglutide & Tirzepatide - LegacyRX")).toBe(true);
     expect(HEALTH_CATEGORY_PATTERN.test("LegacyRX")).toBe(false);
   });

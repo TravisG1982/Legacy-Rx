@@ -31,6 +31,7 @@ export type LeadRow = {
   age_18: string | null;
   on_glp1: string | null;
   email_consent: boolean;
+  email_marketing_consent: boolean;
   sms_transactional_consent: boolean;
   sms_marketing_consent: boolean;
   stage: LeadStage;

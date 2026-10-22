@@ -192,6 +192,8 @@ section.lx { padding: 48px 0; }
 .site-footer { background: var(--ink); color: rgba(239,230,218,.78); padding: 56px 0 30px; font-size: .88rem; }
 .site-footer a { color: rgba(239,230,218,.78); }
 .site-footer a:hover { color: var(--cream); }
+.site-footer button { padding: 0; border: 0; background: none; color: rgba(239,230,218,.78); font: inherit; text-align: left; cursor: pointer; }
+.site-footer button:hover { color: var(--cream); }
 .foot-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 34px; }
 .foot-grid h4 { color: var(--cream); font-family: var(--body); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 14px; }
 .foot-grid ul { list-style: none; padding: 0; margin: 0; }
@@ -265,6 +267,7 @@ a.trust-badge:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px 
 .mini-footer { position: relative; z-index: 1; text-align: center; color: var(--muted); font-size: .82rem; margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); }
 .mini-links { margin-top: 8px; }
 .mini-links a { color: var(--burgundy-soft); text-decoration: none; margin: 0 3px; }
+.mini-links button { padding: 0; border: 0; background: none; color: var(--burgundy-soft); font: inherit; cursor: pointer; }
 .qcard-title { font-size: 1.6rem; margin-bottom: 6px; }
 .qsub { color: var(--muted); margin-bottom: 20px; }
 .divider-or { text-align: center; color: var(--muted); font-size: .8rem; margin: 16px 0; }
@@ -754,7 +757,10 @@ body:has(.funnel-sticky-bar):has(.cookie-consent) main { padding-bottom: 280px; 
 .order-help-head { display: flex; justify-content: space-between; align-items: center; }
 .order-help-close { background: none; border: 0; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; }
 .order-help-label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: var(--foreground); }
-.order-help-label select, .order-help-label textarea { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--background); color: var(--foreground); }
+.order-help-label select { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--background); color: var(--foreground); }
 .order-help-answer { white-space: pre-wrap; background: var(--muted-bg); border-radius: 10px; padding: 12px 14px; color: var(--foreground); font-size: 15px; line-height: 1.5; }
+.order-help-answer p { margin: 0; }
+.order-help-links { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; }
+.order-help-status { display: grid; gap: 10px; }
 .order-help-error { color: var(--primary); font-size: 14px; margin: 0; }
 .order-help-note { color: var(--muted); font-size: 12px; margin: 0; }

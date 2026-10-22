@@ -15,21 +15,14 @@ export type Step1Values = {
   age18: string | null;
   onGlp1: string | null;
   emailConsent: boolean;
+  emailMarketingConsent: boolean;
   smsConsent: boolean;
   smsMarketing: boolean;
 };
 
 export type Step1Errors = Partial<
   Record<
-    | "state"
-    | "firstName"
-    | "lastName"
-    | "email"
-    | "phone"
-    | "age18"
-    | "onGlp1"
-    | "emailConsent"
-    | "smsConsent",
+    "state" | "firstName" | "lastName" | "email" | "phone" | "age18" | "onGlp1" | "emailConsent",
     string
   >
 >;
@@ -43,7 +36,6 @@ const FIELD_ORDER: (keyof Step1Errors)[] = [
   "phone",
   "age18",
   "onGlp1",
-  "smsConsent",
 ];
 
 /** Shared validation so /qualify and the promo landers never drift apart. */
@@ -62,8 +54,8 @@ export function validateStep1Fields(v: Step1Values): Step1Errors {
   else if (digits.length !== 10) e.phone = "Enter a valid 10-digit US phone number.";
   if (!v.age18) e.age18 = "Please answer this question.";
   if (!v.onGlp1) e.onGlp1 = "Please answer this question.";
-  if (!v.emailConsent) e.emailConsent = "You must agree to receive emails to continue.";
-  if (!v.smsConsent) e.smsConsent = "You must consent to transactional text messages to continue.";
+  if (!v.emailConsent)
+    e.emailConsent = "Please acknowledge the emails needed for your assessment and order.";
   return e;
 }
 
@@ -95,9 +87,11 @@ export function commitStep1(v: Step1Values, formName = "qualify_step1_free_consu
       state: v.state,
     },
     answers: {
+      consentVersion: 2,
       age18: v.age18,
       onGlp1: v.onGlp1,
       emailConsent: v.emailConsent,
+      emailMarketingConsent: v.emailMarketingConsent,
       smsConsent: v.smsConsent,
       smsMarketing: v.smsMarketing,
     },
@@ -120,6 +114,7 @@ export function commitStep1(v: Step1Values, formName = "qualify_step1_free_consu
     age18: v.age18,
     onGlp1: v.onGlp1,
     emailConsent: v.emailConsent,
+    emailMarketingConsent: v.emailMarketingConsent,
     smsTransactionalConsent: v.smsConsent,
     smsMarketingConsent: v.smsMarketing,
     stage: "health_screen",

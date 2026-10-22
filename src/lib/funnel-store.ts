@@ -14,9 +14,11 @@ export type FunnelContact = {
 export type FunnelStep = 1 | 2 | 3;
 
 export type FunnelAnswers = {
+  consentVersion?: 2;
   age18?: string | null;
   onGlp1?: string | null;
   emailConsent?: boolean;
+  emailMarketingConsent?: boolean;
   smsConsent?: boolean;
   smsMarketing?: boolean;
   none?: boolean;

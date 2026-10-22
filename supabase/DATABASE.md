@@ -4,7 +4,7 @@ Status as of October 21, 2026. Target Supabase project: **Legacy Rx**, project I
 
 ## Current state
 
-- Ten SQL migrations from [`migrations/`](./migrations/) have been applied. Local filenames match the migration history in Supabase.
+- Eleven SQL migrations from [`migrations/`](./migrations/) have been applied. Local filenames match the migration history in Supabase.
 - The `public` schema contains eight tables. Auth users, orders, and subscriptions were empty before the two October 21 migrations; no records were imported.
 - Row Level Security (RLS) is enabled on all eight tables. The verified-email claim function is executable only by `service_role`, and client roles have no table privileges on `account_email_claims`.
 - There are no foreign keys between these tables. The `user_id` columns in `orders` and `subscriptions` have no foreign key to `auth.users`. The application also associates orders and subscriptions with accounts by verified email.
@@ -14,9 +14,9 @@ Status as of October 21, 2026. Target Supabase project: **Legacy Rx**, project I
 
 | Table | Purpose | Key fields and constraints |
 | --- | --- | --- |
-| `funnel_leads` | Early intake data and contact consent. | `id` is a UUID primary key; `session_id` is required and unique. Includes name, email, phone, state, `age_18` and `on_glp1` answers, separate email/SMS consent flags, `stage`, `created_at`, and `updated_at`. |
+| `funnel_leads` | Early intake data and contact consent. | `id` is a UUID primary key; `session_id` is required and unique. Includes name, email, phone, state, `age_18` and `on_glp1` answers, separate operational and marketing email consent flags, SMS consent flags, `stage`, `created_at`, and `updated_at`. |
 | `orders` | Orders and their payment, consultation, and fulfillment state. | `id` is a UUID primary key; `order_number` is unique. Includes customer details, medication, plan, product, amounts, `status`, `payment_mode`, `environment`, `user_id`, and Stripe, FuzeRx, and FuseHealth fields (`fuse_order_id`, `fuse_session_id`). Non-null `fuse_order_id` values are unique. |
-| `contact_messages` | Contact form submissions. | `id` is a UUID primary key. `name`, `email`, `phone`, and `message` are required. Includes consent flags and `created_at`. |
+| `contact_messages` | Contact form submissions. | `id` is a UUID primary key and doubles as the submission ID. `name`, `email`, `phone`, and `message` are required. Includes consent flags, delivery status and timestamps, and `created_at`. |
 | `order_failures` | Diagnostic records for failed order creation or processing. | `id` is a UUID primary key. Optional session and contact details, product, amount, `reason`, and `created_at`. |
 | `subscriptions` | Subscription and billing-period records. | `id` is a UUID primary key; `stripe_subscription_id` is required and unique. Includes `stripe_customer_id`, `email`, `price_id`, status, billing periods, cancellation flag, `environment`, `user_id`, and timestamps. |
 | `account_email_claims` | Reserves a normalized verified email for one account while guest records are claimed. | `email` is the primary key; `user_id` identifies the account. RLS is enabled, and `anon` and `authenticated` have no table privileges. |
@@ -62,7 +62,12 @@ Schema migrations live in [`supabase/migrations/`](./migrations/) and run in tim
 | `20261016091805_add_order_prescription_token.sql` | Adds `fuzerx_prescription_token` to `orders`. |
 | `20261016091809_add_subscriptions_coupons_accounts.sql` | Adds account and subscription fields to `orders`; creates `subscriptions`, `coupons`, their policies, indexes, and triggers, and `redeem_coupon`. |
 | `20261016091814_add_fuse_brand_order_fields.sql` | Adds FuseHealth IDs to `orders` and creates `fuse_webhook_events` for webhook deduplication. |
+| `20261021120000_claim_verified_guest_records.sql` | Claims guest orders and subscriptions only for a verified account email. |
+| `20261021120100_revoke_account_email_claims_client_grants.sql` | Restricts the account-email reservation table to the server role. |
+| `20261021120200_contact_delivery_and_email_marketing.sql` | Separates email marketing consent and records contact-form delivery attempts. |
 
 The workflow for future migrations is described in [`supabase/README.md`](./README.md).
 
 On October 21, 2026, `20261021120000_claim_verified_guest_records.sql` and `20261021120100_revoke_account_email_claims_client_grants.sql` were applied to the hosted Legacy Rx project. The first adds an atomic, verified-email claim for guest orders and subscriptions, reserves each normalized email for one account, and makes FuseHealth and Stripe session identifiers unique. The second explicitly revokes Supabase's default client-role table grants. Their migration-history entries, schema objects, RLS, and grants were checked in the hosted project.
+
+On October 21, 2026, `20261021120200_contact_delivery_and_email_marketing.sql` was applied to the same project. The migration history contains one entry for version `20261021120200`; `email_marketing_consent` and all three contact delivery columns were verified in `information_schema`. Existing contact rows default to `unconfirmed` because their delivery outcomes cannot be inferred. New rows explicitly start as `pending`.

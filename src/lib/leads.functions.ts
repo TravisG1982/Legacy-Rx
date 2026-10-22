@@ -12,6 +12,7 @@ const upsertSchema = z.object({
   age18: z.string().trim().max(10).nullish(),
   onGlp1: z.string().trim().max(10).nullish(),
   emailConsent: z.boolean().optional(),
+  emailMarketingConsent: z.boolean().optional(),
   smsTransactionalConsent: z.boolean().optional(),
   smsMarketingConsent: z.boolean().optional(),
   stage: z
@@ -53,6 +54,8 @@ export const upsertFunnelLead = createServerFn({ method: "POST" })
     if (data.age18 !== undefined) patch['age_18'] = data.age18 || null;
     if (data.onGlp1 !== undefined) patch['on_glp1'] = data.onGlp1 || null;
     if (data.emailConsent !== undefined) patch['email_consent'] = data.emailConsent;
+    if (data.emailMarketingConsent !== undefined)
+      patch['email_marketing_consent'] = data.emailMarketingConsent;
     if (data.smsTransactionalConsent !== undefined)
       patch['sms_transactional_consent'] = data.smsTransactionalConsent;
     if (data.smsMarketingConsent !== undefined)
@@ -146,7 +149,7 @@ export const listFunnelLeads = createServerFn({ method: "POST" })
   const { data, error } = await supabaseAdmin
     .from("funnel_leads")
     .select(
-      "id, first_name, last_name, email, phone, state, age_18, on_glp1, email_consent, sms_transactional_consent, sms_marketing_consent, stage, created_at, updated_at",
+      "id, first_name, last_name, email, phone, state, age_18, on_glp1, email_consent, email_marketing_consent, sms_transactional_consent, sms_marketing_consent, stage, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
     .limit(5000);
