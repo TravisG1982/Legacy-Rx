@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { authRedirectUrl, cancelAuthCallbackPending, consumeAuthReturn, markAuthCallbackPending, prepareAuthReturn } from "@/lib/auth-return";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -22,23 +23,34 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const redirected = useRef(false);
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const finishSignIn = useCallback(() => {
+    if (redirected.current) return;
+    redirected.current = true;
+    void navigate({ to: consumeAuthReturn(window.sessionStorage) });
+  }, [navigate]);
+
   useEffect(() => {
+    prepareAuthReturn(window.location.search, window.location.hash, window.sessionStorage);
     const error =
       new URLSearchParams(window.location.search).get("error_description") ??
       new URLSearchParams(window.location.hash.slice(1)).get("error_description");
-    if (error) setMsg(error);
+    if (error) {
+      setMsg(error);
+      return;
+    }
 
     let active = true;
     void supabase.auth
       .getUser()
       .then(({ data }) => {
-        if (active && data.user) void navigate({ to: "/account" });
+        if (active && data.user) finishSignIn();
       })
       .catch(() => {
         // A missing or expired session leaves the sign-in form available.
@@ -46,7 +58,7 @@ function AuthPage() {
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [finishSignIn]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,12 +71,13 @@ function AuthPage() {
           : await supabase.auth.signUp({
               email,
               password,
-              options: { emailRedirectTo: `${window.location.origin}/auth` },
+              options: { emailRedirectTo: authRedirectUrl(window.location.origin) },
             });
       if (res.error) return setMsg(res.error.message);
       if (res.data.session) {
-        void navigate({ to: "/account" });
+        finishSignIn();
       } else if (mode === "up") {
+        markAuthCallbackPending(window.sessionStorage);
         setMsg("Check your email to confirm your account, then sign in.");
       }
     } catch {
@@ -78,12 +91,17 @@ function AuthPage() {
     setBusy(true);
     setMsg(null);
     try {
+      markAuthCallbackPending(window.sessionStorage);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth` },
+        options: { redirectTo: authRedirectUrl(window.location.origin) },
       });
-      if (error) setMsg(error.message);
+      if (error) {
+        cancelAuthCallbackPending(window.sessionStorage);
+        setMsg(error.message);
+      }
     } catch {
+      cancelAuthCallbackPending(window.sessionStorage);
       setMsg("Could not connect to Google sign-in. Please try again.");
     } finally {
       setBusy(false);

@@ -100,72 +100,67 @@ export const upsertFunnelLead = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-export const unlockTravis = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ password: z.string().max(200) }).parse(data))
-  .handler(async ({ data }) => {
-    const { passwordMatches, travisSession } = await import("./leads.server");
-    const expected = process.env['TRAVIS_PASSWORD'];
-    if (!expected) throw new Error("Admin password is not configured.");
-    if (!passwordMatches(data.password, expected)) return { ok: false as const };
-    const session = await travisSession();
-    await session.update({ unlocked: true });
-    return { ok: true as const };
-  });
-
-export const lockTravis = createServerFn({ method: "POST" }).handler(async () => {
-  const { travisSession } = await import("./leads.server");
-  const session = await travisSession();
-  await session.clear();
-  return { ok: true as const };
-});
-
 export const deleteFunnelLeads = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
-    z.object({ ids: z.array(z.string().uuid()).min(1).max(500) }).parse(data),
-  )
+  .inputValidator((data: unknown) => data)
   .handler(async ({ data }) => {
-    const { travisSession } = await import("./leads.server");
-    const session = await travisSession();
-    if (!session.data.unlocked) return { ok: false as const, deleted: 0 };
+    const { requireAdminAccess, auditAdminAction, validateAdminInput } = await import("./admin-access.server");
+    const actor = await requireAdminAccess("delete_leads", "delete_leads", "funnel_leads");
+    const input = await validateAdminInput(actor.userId, "delete_leads", "funnel_leads", data,
+      (value) => z.object({ ids: z.array(z.string().uuid()).min(1).max(500) }).parse(value));
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error, count } = await supabaseAdmin
-      .from("funnel_leads")
-      .delete({ count: "exact" })
-      .in("id", data.ids);
-    if (error) throw new Error(error.message);
-    return { ok: true as const, deleted: count ?? data.ids.length };
+    let response: Awaited<ReturnType<typeof supabaseAdmin.rpc<"delete_admin_funnel_leads">>>;
+    try {
+      response = await supabaseAdmin.rpc("delete_admin_funnel_leads", {
+        p_actor_id: actor.userId, p_lead_ids: input.ids,
+      });
+    } catch {
+      await auditAdminAction(actor.userId, "delete_leads", "funnel_leads", null, "failure");
+      throw new Error("Could not delete leads.");
+    }
+    if (response.error) {
+      await auditAdminAction(actor.userId, "delete_leads", "funnel_leads", null, response.error.code === "42501" ? "denied" : "failure");
+      throw new Error("Could not delete leads.");
+    }
+    return { ok: true as const, deleted: response.data ?? 0 };
   });
 
 // POST (not GET) so the browser never answers a refresh from its HTTP cache.
 export const listFunnelLeads = createServerFn({ method: "POST" })
-  .inputValidator((input: { t?: number } | undefined) => input ?? {})
-  .handler(async () => {
-  const { travisSession } = await import("./leads.server");
-  const session = await travisSession();
-  if (!session.data.unlocked) return { unlocked: false as const, leads: [] as LeadRow[] };
+  .inputValidator((input: unknown) => input)
+  .handler(async ({ data }) => {
+  const { requireAdminAccess, auditAdminAction, validateAdminInput } = await import("./admin-access.server");
+  const actor = await requireAdminAccess("view_leads", "view_leads", "funnel_leads");
+  await validateAdminInput(actor.userId, "view_leads", "funnel_leads", data ?? {},
+    (value) => z.object({ t: z.number().int().optional() }).parse(value));
 
+  try {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
+  const { data: leadData, error } = await supabaseAdmin
     .from("funnel_leads")
     .select(
       "id, first_name, last_name, email, phone, state, age_18, on_glp1, email_consent, email_marketing_consent, sms_transactional_consent, sms_marketing_consent, stage, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
     .limit(5000);
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
 
   const { sweepAbandonedOrders } = await import("./orders.server");
   await sweepAbandonedOrders().catch(() => {});
 
   // Attach the completed sale (if any) so paid customers are visible as such.
   // Unpaid/abandoned checkouts are not sales.
-  const { data: orders } = await supabaseAdmin
+  const { data: orders, error: ordersError } = await supabaseAdmin
     .from("orders")
     .select("order_number, email, session_id, total, created_at")
     .eq("status", "paid")
     .order("created_at", { ascending: false })
     .limit(5000);
+  if (ordersError) {
+    throw new Error("Could not load paid orders.");
+  }
 
   const byEmail = new Map<string, { order_number: string; total: number }>();
   for (const o of orders ?? []) {
@@ -174,7 +169,7 @@ export const listFunnelLeads = createServerFn({ method: "POST" })
     byEmail.set(key, { order_number: o.order_number, total: Number(o.total) });
   }
 
-  const leads = (data ?? []).map((l) => {
+  const leads = (leadData ?? []).map((l) => {
     const match = byEmail.get((l.email ?? "").trim().toLowerCase());
     return {
       ...l,
@@ -184,5 +179,18 @@ export const listFunnelLeads = createServerFn({ method: "POST" })
     };
   }) as LeadRow[];
 
+  await auditAdminAction(actor.userId, "view_leads", "funnel_leads", null, "success");
   return { unlocked: true as const, leads };
+  } catch (error) {
+    await auditAdminAction(actor.userId, "view_leads", "funnel_leads", null, "failure");
+    throw error;
+  }
+});
+
+/** Recheck access and record an export before offering downloaded lead data. */
+export const authorizeLeadExport = createServerFn({ method: "POST" }).handler(async () => {
+  const { requireAdminAccess, auditAdminAction } = await import("./admin-access.server");
+  const actor = await requireAdminAccess("view_leads", "export_leads", "funnel_leads");
+  await auditAdminAction(actor.userId, "export_leads", "funnel_leads", null, "success");
+  return { ok: true as const };
 });

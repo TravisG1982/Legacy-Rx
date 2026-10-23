@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_roles: {
+        Row: { user_id: string; role: "owner" | "staff"; view_leads: boolean; delete_leads: boolean; view_pricing: boolean; manage_coupons: boolean; created_at: string; updated_at: string }
+        Insert: { user_id: string; role: "owner" | "staff"; view_leads?: boolean; delete_leads?: boolean; view_pricing?: boolean; manage_coupons?: boolean; created_at?: string; updated_at?: string }
+        Update: { user_id?: string; role?: "owner" | "staff"; view_leads?: boolean; delete_leads?: boolean; view_pricing?: boolean; manage_coupons?: boolean; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      admin_audit_log: {
+        Row: { id: number; actor_id: string | null; action: string; object_type: string; object_id: string | null; occurred_at: string; result: "denied" | "success" | "failure" | "validation_error" }
+        Insert: { id?: number; actor_id?: string | null; action: string; object_type: string; object_id?: string | null; occurred_at?: string; result: "denied" | "success" | "failure" | "validation_error" }
+        Update: { id?: number; actor_id?: string | null; action?: string; object_type?: string; object_id?: string | null; occurred_at?: string; result?: "denied" | "success" | "failure" | "validation_error" }
+        Relationships: []
+      }
       account_email_claims: {
         Row: {
           email: string
@@ -436,6 +448,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_admin_coupon: { Args: { p_actor_id: string; p_coupon_id: string }; Returns: undefined }
+      delete_admin_funnel_leads: { Args: { p_actor_id: string; p_lead_ids: string[] }; Returns: number }
+      save_admin_coupon: { Args: { p_actor_id: string; p_coupon_id: string | null; p_code: string; p_type: string; p_amount: number; p_active: boolean; p_expires_at: string | null; p_max_uses: number | null; p_meds: string[] }; Returns: string }
       claim_verified_guest_records: { Args: { _user_id: string }; Returns: string }
       redeem_coupon: { Args: { _code: string }; Returns: undefined }
     }
