@@ -1,9 +1,16 @@
 # Agent rules
 
-- New orders go through FuseHealth's Brand API hosted intake + payment (`POST /checkout/sessions`, iframe on `/start/$med`); program IDs live in `FUSE_PROGRAM_IDS` and products without one are hidden. Why: FuseHealth is merchant of record and handles payment, provider review, fulfillment and refunds.
+## Current implementation versus approved launch direction
+
+- The current new-order code uses FuseHealth's Brand API hosted intake + payment (`POST /checkout/sessions` from `/start/$med`); program IDs live in `FUSE_PROGRAM_IDS` and products without one are hidden. The route currently redirects to FuseHealth's hosted form. FuseHealth remains for the existing flow until the Beluga replacement has been tested end to end.
+- For the LegacyRX launch, the client chose Beluga's branded **hosted medical intake forms**, integrated through Beluga's API and webhooks. The client reports that patients remain on the LegacyRX website. LegacyRX controls Stripe checkout/payment processing, patient accounts, and dashboards. Confirm Beluga's actual hosted-form/session contract and payment authorization/capture timing in documentation and sandbox. A fully direct API intake is a later option, not launch scope. Beluga's 30-day hosted-forms estimate is not the whole-app launch date.
+- Keep the three LLCs' production patient data, payment accounts, infrastructure, access, and vendor agreement coverage separate. Do not use real patient information before the required agreements and safeguards are in place.
+
+## Existing code paths and conventions
+
 - Order status updates arrive on `/api/public/webhooks/fuse-brand`, verified with `X-Fuse-Signature` and deduped by `X-Fuse-Idempotency-Key`; rows match by `fuse_order_id` or `fuse_session_id`. Why: Fuse webhooks carry only opaque ids, so the row is created when the session starts.
 - Customer accounts match orders and subscriptions by verified email (as well as `user_id`). Why: checkout doesn't require sign-in, so guest orders still appear after sign-up.
-- Legacy Stripe checkout, coupons and renewal code stay in place but unlinked, for historic orders only. Why: older orders remain visible in /travis.
+- Legacy Stripe checkout, coupons and renewal code stay in place but unlinked, for historic orders only. Implement the new LegacyRX-controlled Stripe and Beluga flow separately. Why: older orders remain visible in /travis.
 - Unpaid orders older than 24h are swept to `abandoned` lazily (on checkout creation and /travis load). Why: no cron needed.
 - Products are defined in `legacyrx-data.ts` (`MEDS`, `MED_INFO` with a `track`), and each product's monthly renewal Stripe price uses lookup key `${medKey}_monthly`. Why: new FuzeRx catalog products are added by data only; checkout, coupons, qualify and pages read from it.
 - Non-GLP-1 programs reuse `/qualify?track=<trt|hrt|aa|sh>` with per-track screening; intake summary text goes to FuzeRx as the consult conditions. Why: one funnel, one checkout.

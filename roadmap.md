@@ -1,3 +1,6 @@
+> Historical development checklist. Its checked items describe earlier implementations, not current launch readiness. For current decisions, verification status, and open work, use `agents/PROJECT_CONTEXT.md`, `agents/QA_TODO.md`, and `supabase/DATABASE.md`.
+
+> October 23 client direction: launch LegacyRX using Beluga Health's branded hosted medical intake forms via API/webhooks and a new LegacyRX-controlled Stripe checkout. Keep FuseHealth for the existing flow until the replacement is verified. A fully direct Beluga API intake is a later option. Beluga's approximate 30-day hosted-forms estimate is not an approved launch date for the whole application.
 
 ## New
 - [x] FuzeRx integration (sandbox key) — checkout now creates server-side orders; FuzeRx patient + consult submitted after payment; fill request dispatched on NOTIFY_RX webhook

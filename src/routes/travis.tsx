@@ -5,11 +5,13 @@ import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import {
+  authorizeLeadExport,
   deleteFunnelLeads,
   listFunnelLeads,
-  lockTravis,
-  unlockTravis,
 } from "../lib/leads.functions";
+import { getAdminStatus } from "../lib/admin-access.functions";
+import { AdminGate } from "../components/AdminGate";
+import { supabase } from "@/integrations/supabase/client";
 import { ABANDONED_STAGES, STAGE_LABELS, type LeadRow } from "../lib/leads-types";
 
 export const Route = createFileRoute("/travis")({
@@ -21,7 +23,12 @@ export const Route = createFileRoute("/travis")({
     ],
   }),
   ssr: false,
-  loader: () => listFunnelLeads(),
+  loader: async () => {
+    const status = await getAdminStatus();
+    if (status.state !== "ready" || !status.permissions?.view_leads) return { status, leads: [] as LeadRow[] };
+    const result = await listFunnelLeads();
+    return { status, leads: result.leads };
+  },
   errorComponent: () => (
     <div style={{ padding: 40, textAlign: "center" }}>Something went wrong loading leads.</div>
   ),
@@ -216,89 +223,9 @@ function TravisPage() {
       /* noop */
     }
   }, []);
-  if (!data.unlocked) return <LockScreen />;
-  return <LeadsDashboard leads={data.leads} />;
-}
-
-
-function LockScreen() {
-  const router = useRouter();
-  const unlock = useServerFn(unlockTravis);
-  const [password, setPassword] = useState("");
-  const [show, setShow] = useState(false);
-  const [error, setError] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    const res = await unlock({ data: { password } });
-    setBusy(false);
-    if (res.ok) await router.invalidate();
-    else setError(true);
-  }
-
-  return (
-    <div style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <form onSubmit={submit} style={{ ...box, padding: 28, width: "100%", maxWidth: 380 }}>
-        <h1 style={{ fontFamily: "var(--display)", fontSize: "1.4rem", marginBottom: 6 }}>Leads access</h1>
-        <p className="lx-muted" style={{ fontSize: ".88rem", marginBottom: 16 }}>
-          Enter the password to view funnel leads.
-        </p>
-        <div style={{ position: "relative" }}>
-          <input
-            type={show ? "text" : "password"}
-            autoComplete="current-password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError(false);
-            }}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "12px 44px 12px 14px",
-              border: `1px solid ${error ? "#c0392b" : "#d9d1c7"}`,
-              borderRadius: 10,
-              fontSize: "1rem",
-              color: "#2b2320",
-              background: "#fff",
-              outline: "none",
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Hide password" : "Show password"}
-            style={{
-              position: "absolute",
-              right: 6,
-              top: "50%",
-              transform: "translateY(-50%)",
-              border: 0,
-              background: "transparent",
-              cursor: "pointer",
-              padding: 8,
-              lineHeight: 1,
-              fontSize: "1rem",
-              color: "#7a6f66",
-            }}
-          >
-            {show ? "🙈" : "👁"}
-          </button>
-        </div>
-        {error && (
-          <div className="field-error" style={{ marginTop: 8 }}>
-            Incorrect password
-          </div>
-        )}
-        <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={busy}>
-          {busy ? "Checking..." : "Unlock"}
-        </button>
-      </form>
-    </div>
-  );
+  if (data.status.state !== "ready") return <AdminGate status={data.status} />;
+  if (!data.status.permissions?.view_leads) return <div className="lx-card" style={{ maxWidth: 440, margin: "60px auto" }}>Lead access is not assigned to this account.</div>;
+  return <LeadsDashboard leads={data.leads} canDelete={data.status.permissions.delete_leads} />;
 }
 
 const EST_TZ = "America/New_York";
@@ -310,12 +237,13 @@ function fmt(dt: string) {
   return `${date}, ${time}`;
 }
 
-function LeadsDashboard({ leads: initialLeads }: { leads: LeadRow[] }) {
+function LeadsDashboard({ leads: initialLeads, canDelete }: { leads: LeadRow[]; canDelete: boolean }) {
   const router = useRouter();
-  const lock = useServerFn(lockTravis);
   const removeLeads = useServerFn(deleteFunnelLeads);
   const fetchLeads = useServerFn(listFunnelLeads);
+  const checkExport = useServerFn(authorizeLeadExport);
   const [leads, setLeads] = useState<LeadRow[]>(initialLeads);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [preset, setPreset] = useState<Preset>("last30");
   const [custom, setCustom] = useState<DateRange | undefined>(undefined);
@@ -463,7 +391,15 @@ function LeadsDashboard({ leads: initialLeads }: { leads: LeadRow[] }) {
         return { from: r.from, to: addDays(startOfDay(r.to), -1) };
       })();
 
-  function exportCsv() {
+  async function exportCsv() {
+    setExportError(null);
+    try {
+      await checkExport();
+    } catch {
+      setExportError("Could not verify export access. Refresh and try again.");
+      await router.invalidate();
+      return;
+    }
     const header = [
       "Received (EST)",
       "First name",
@@ -514,7 +450,7 @@ function LeadsDashboard({ leads: initialLeads }: { leads: LeadRow[] }) {
   }
 
   async function handleLock() {
-    await lock({});
+    await supabase.auth.signOut();
     await router.invalidate();
   }
 
@@ -579,7 +515,7 @@ function LeadsDashboard({ leads: initialLeads }: { leads: LeadRow[] }) {
 
             Range: {rangeLabel}
           </button>
-          <button type="button" className="btn btn-ghost" onClick={exportCsv}>
+          <button type="button" className="btn btn-ghost" onClick={() => void exportCsv()}>
             Export CSV
           </button>
           <button type="button" className="btn btn-ghost" onClick={refresh} disabled={refreshing}>
@@ -685,11 +621,13 @@ function LeadsDashboard({ leads: initialLeads }: { leads: LeadRow[] }) {
         </div>
       </div>
 
+      {exportError && <p role="alert" style={{ color: "#b3261e" }}>{exportError}</p>}
+
       <p className="lx-muted" style={{ fontSize: ".85rem", margin: "10px 0 16px" }}>
         Leads are saved as soon as someone starts typing. Those who never completed step 1 show "Unregistered".
       </p>
 
-      {selectedVisible.length > 0 && (
+      {canDelete && selectedVisible.length > 0 && (
         <div
           style={{
             ...box,

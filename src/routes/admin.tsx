@@ -1,12 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   adminListPricing,
-  adminLogin,
-  adminLogout,
-  adminUpdatePricing,
 } from "../lib/pricing.functions";
+import { getAdminStatus } from "../lib/admin-access.functions";
+import { AdminGate } from "../components/AdminGate";
+import { supabase } from "@/integrations/supabase/client";
 import type { AdminPricingRow } from "../lib/pricing-types";
 import { CouponAdmin } from "../components/CouponAdmin";
 
@@ -19,7 +18,11 @@ export const Route = createFileRoute("/admin")({
     ],
   }),
   ssr: false,
-  loader: () => adminListPricing(),
+  loader: async () => {
+    const status = await getAdminStatus();
+    if (status.state !== "ready" || !status.permissions?.view_pricing) return { status, pricing: null };
+    return { status, pricing: await adminListPricing() };
+  },
   errorComponent: () => (
     <div style={{ padding: 40, textAlign: "center" }}>Something went wrong loading pricing.</div>
   ),
@@ -31,73 +34,16 @@ function money(n: number) {
 }
 
 function AdminPage() {
-  const data = Route.useLoaderData();
-  const router = useRouter();
-
-  if (!data.authenticated) return <LoginCard onDone={() => router.invalidate()} />;
-
-  return <PricingDashboard rows={data.rows} loadError={data.error} />;
-}
-
-function LoginCard({ onDone }: { onDone: () => void }) {
-  const login = useServerFn(adminLogin);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await login({ data: { username, password } });
-      if (!res.ok) setError("Incorrect username or password.");
-      else onDone();
-    } catch {
-      setError("Sign-in failed. Please try again.");
-    }
-    setBusy(false);
+  const { status, pricing } = Route.useLoaderData();
+  if (status.state !== "ready") return <AdminGate status={status} />;
+  if (!status.permissions?.view_pricing || !pricing) {
+    if (status.permissions?.manage_coupons) return <div style={{ maxWidth: 1080, margin: "40px auto", padding: 18 }}>
+      <button className="btn btn-ghost" onClick={async () => { await supabase.auth.signOut(); await window.location.reload(); }}>Sign out</button>
+      <CouponAdmin />
+    </div>;
+    return <div className="lx-card" style={{ maxWidth: 440, margin: "60px auto" }}>No pricing or coupon permissions are assigned to this account.</div>;
   }
-
-  return (
-    <div style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <form
-        onSubmit={submit}
-        className="lx-card"
-        style={{ width: "100%", maxWidth: 380, display: "grid", gap: 12 }}
-      >
-        <h1 style={{ fontSize: "1.3rem", margin: 0 }}>Pricing Admin</h1>
-        <p className="lx-muted" style={{ margin: 0, fontSize: ".9rem" }}>
-          Authorized staff only.
-        </p>
-        <label style={{ display: "grid", gap: 4, fontSize: ".85rem", fontWeight: 600 }}>
-          Username
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            style={{ padding: "10px 12px", border: "1px solid #d8d3cc", borderRadius: 8 }}
-          />
-        </label>
-        <label style={{ display: "grid", gap: 4, fontSize: ".85rem", fontWeight: 600 }}>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            style={{ padding: "10px 12px", border: "1px solid #d8d3cc", borderRadius: 8 }}
-          />
-        </label>
-        {error && <div style={{ color: "#b3261e", fontSize: ".85rem" }}>{error}</div>}
-        <button className="btn btn-primary" type="submit" disabled={busy}>
-          {busy ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
-    </div>
-  );
+  return <PricingDashboard rows={pricing.rows} loadError={pricing.error} canManageCoupons={status.permissions.manage_coupons} />;
 }
 
 type RowState = { value: string; busy: boolean; message: string | null; error: string | null };
@@ -105,13 +51,13 @@ type RowState = { value: string; busy: boolean; message: string | null; error: s
 function PricingDashboard({
   rows,
   loadError,
+  canManageCoupons,
 }: {
   rows: AdminPricingRow[];
   loadError: string | null;
+  canManageCoupons: boolean;
 }) {
   const router = useRouter();
-  const update = useServerFn(adminUpdatePricing);
-  const logout = useServerFn(adminLogout);
   const [state, setState] = useState<Record<string, RowState>>({});
 
   function patch(id: string, next: Partial<RowState>) {
@@ -122,39 +68,6 @@ function PricingDashboard({
     }));
   }
 
-
-  async function submit(row: AdminPricingRow) {
-    const raw = state[row.productId]?.value ?? "";
-    const price = Number(raw);
-    if (!raw.trim() || !Number.isFinite(price) || price <= 0) {
-      patch(row.productId, { error: "Enter a valid price.", message: null });
-      return;
-    }
-    patch(row.productId, { busy: true, error: null, message: null });
-    try {
-      const res = await update({ data: { productId: row.productId, price } });
-      if (!res.ok) {
-        patch(row.productId, { busy: false, error: res.error ?? "Update failed." });
-        return;
-      }
-      if (!("verified" in res) || !res.verified) {
-        patch(row.productId, {
-          busy: false,
-          error: ("error" in res && res.error) || "Update not verified by the pricing API.",
-        });
-        await router.invalidate();
-        return;
-      }
-      patch(row.productId, {
-        busy: false,
-        value: "",
-        message: `Updated and verified: ${money(res.persisted!)}`,
-      });
-      await router.invalidate();
-    } catch (err) {
-      patch(row.productId, { busy: false, error: (err as Error).message });
-    }
-  }
 
   return (
     <div style={{ padding: "28px 18px", maxWidth: 1080, margin: "0 auto" }}>
@@ -180,7 +93,7 @@ function PricingDashboard({
           <button
             className="btn btn-ghost"
             onClick={async () => {
-              await logout();
+              await supabase.auth.signOut();
               await router.invalidate();
             }}
           >
@@ -269,7 +182,7 @@ function PricingDashboard({
           </tbody>
         </table>
       </div>
-      <CouponAdmin />
+      {canManageCoupons && <CouponAdmin />}
     </div>
   );
 }
