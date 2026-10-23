@@ -1,6 +1,6 @@
 import type { MedKey } from "./legacyrx-data";
-import semaVial from "../assets/semaglutide-vial.webp.asset.json";
-import tirzVial from "../assets/tirzepatide-vial.webp.asset.json";
+import semaVial from "../assets/semaglutide-vial.webp";
+import tirzVial from "../assets/tirzepatide-vial.webp";
 import trtInj from "../assets/products/trt_inj.jpg";
 import trtCream from "../assets/products/trt_cream.jpg";
 import enclo from "../assets/products/enclo.jpg";
@@ -13,8 +13,8 @@ import tadalafil from "../assets/products/tadalafil.jpg";
 
 /** Labeled product photo for each medication. */
 export const PRODUCT_IMAGES: Record<MedKey, string> = {
-  sema: semaVial.url,
-  tirz: tirzVial.url,
+  sema: semaVial,
+  tirz: tirzVial,
   trt_inj: trtInj,
   trt_cream: trtCream,
   enclo,

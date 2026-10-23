@@ -23,17 +23,14 @@ export const PLAN_MONTHS: Record<Plan["id"], number> = { "1": 1, "3": 3, "6": 6,
 
 export type PlanPrice = { total: number; monthly: number; live: boolean };
 
-/**
- * Live API price for a plan, keyed by Product ID. Falls back to the project's
- * catalog value only when the API has no price for that Product ID.
- */
+/** Display price for a plan comes from the checked-in LegacyRX catalog. */
 export function planPrice(
   prices: Record<string, number> | undefined,
   med: MedKey,
   planId: Plan["id"],
 ): PlanPrice {
   const productId = CHECKOUT_PRODUCT_IDS[med][planId] ?? "";
-  // FuseHealth is merchant of record: the catalog mirrors its prices, so the old pricing API is ignored.
+  // FuseHealth is merchant of record: the catalog mirrors its prices.
   void prices; void productId;
   const apiTotal: number | undefined = undefined;
   const fallback = MEDS[med].plans.find((p) => p.id === planId) ?? MEDS[med].plans[0]!;

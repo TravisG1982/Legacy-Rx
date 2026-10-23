@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { clearPromo } from "@/lib/funnel-store";
-import semaVial from "@/assets/semaglutide-vial.webp.asset.json";
-import tirzVial from "@/assets/tirzepatide-vial.webp.asset.json";
-import brandLogo from "@/assets/legacyrx-burgundy.webp.asset.json";
-import creamLogo from "@/assets/legacyrx-cream.webp.asset.json";
+import semaVial from "@/assets/semaglutide-vial.webp";
+import tirzVial from "@/assets/tirzepatide-vial.webp";
+import brandLogo from "@/assets/legacyrx-burgundy.webp";
+import creamLogo from "@/assets/legacyrx-cream.webp";
 import { useFromPrices } from "@/hooks/use-live-prices";
 
 export const Route = createFileRoute("/lander")({
@@ -134,7 +134,7 @@ function LanderPage() {
 
 
       <nav className="nav">
-        <img loading="lazy" decoding="async" src={brandLogo.url} alt="LegacyRX" style={{ height: 36, width: "auto", display: "block" }} />
+        <img loading="lazy" decoding="async" src={brandLogo} alt="LegacyRX" style={{ height: 36, width: "auto", display: "block" }} />
         <Link to="/qualify" className="btn btn-primary" style={{ minHeight: 44, padding: "11px 22px" }}>
           Get started
         </Link>
@@ -164,7 +164,7 @@ function LanderPage() {
         <div className="pgrid">
           <div className="pcard">
             <span className="pbadge value">Best Value</span>
-            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={semaVial.url} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "0 auto 14px", height: 220, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
+            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={semaVial} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "0 auto 14px", height: 220, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
             <div className="pname">Semaglutide</div>
             <div className="ptype">Compounded GLP-1</div>
             <div className="prow"><span className="pnow">{semaText}</span><span className="pper">/mo</span></div>
@@ -180,7 +180,7 @@ function LanderPage() {
           </div>
           <div className="pcard hot">
             <span className="pbadge">Most Popular</span>
-            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={tirzVial.url} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "0 auto 14px", height: 220, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
+            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={tirzVial} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "0 auto 14px", height: 220, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
             <div className="pname">Tirzepatide</div>
             <div className="ptype">Compounded GLP-1 + GIP</div>
             <div className="prow"><span className="pnow">{tirzText}</span><span className="pper">/mo</span></div>
@@ -286,7 +286,7 @@ function LanderPage() {
       </section>
 
       <footer>
-        <img loading="lazy" decoding="async" src={creamLogo.url} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", margin: "0 auto 14px", filter: "brightness(0) invert(1)" }} />
+        <img loading="lazy" decoding="async" src={creamLogo} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", margin: "0 auto 14px", filter: "brightness(0) invert(1)" }} />
         <div className="disc">LegacyRX is a telehealth and pharmacy-fulfillment platform, not a medical practice. All prescribing decisions are made independently by a licensed clinician. Compounded medications are not FDA-approved; the FDA does not evaluate compounded medications for safety, effectiveness, or quality. Individual results vary. Not everyone qualifies. In an emergency call 9-1-1.</div>
         <div>
           <Link to="/privacy-policy" style={{ color: "rgba(239,230,218,.6)", textDecoration: "underline" }}>Privacy</Link>

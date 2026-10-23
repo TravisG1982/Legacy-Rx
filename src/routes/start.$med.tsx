@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { FunnelShell } from "../components/FunnelShell";
@@ -38,6 +38,10 @@ function StartVisitPage() {
       return;
     }
     const c = readFunnel().contact ?? {};
+    if (!c.email) {
+      setError("Complete the assessment first so we can connect your order to your account.");
+      return;
+    }
     const qs = new URLSearchParams(window.location.search);
     const utm: Record<string, string> = {};
     for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "gclid", "fbclid"]) {
@@ -48,7 +52,7 @@ function StartVisitPage() {
       data: {
         med,
         leadSessionId: leadSessionId() ?? undefined,
-        email: c.email || undefined,
+        email: c.email,
         firstName: c.firstName,
         lastName: c.lastName,
         phone: c.phone,
@@ -85,7 +89,7 @@ function StartVisitPage() {
         {name}: answer a few health questions and complete payment securely. A licensed provider usually reviews within 1 day. Not everyone qualifies.
       </p>
       {error ? (
-        <p className="qsub" role="alert">{error}</p>
+        <p className="qsub" role="alert">{error} <Link to="/qualify">Start assessment</Link>.</p>
       ) : embedUrl ? (
         <p className="qsub" style={{ textAlign: "center" }}>
           Taking you to the secure form… <a href={embedUrl}>Tap here if nothing happens</a>.

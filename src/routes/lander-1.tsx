@@ -2,10 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { clearPromo } from "@/lib/funnel-store";
 import { Countdown } from "@/components/Countdown";
-import semaVial from "@/assets/semaglutide-vial.webp.asset.json";
-import tirzVial from "@/assets/tirzepatide-vial.webp.asset.json";
-import brandLogo from "@/assets/legacyrx-burgundy.webp.asset.json";
-import footerLogo from "@/assets/legacyrx-cream.webp.asset.json";
+import semaVial from "@/assets/semaglutide-vial.webp";
+import tirzVial from "@/assets/tirzepatide-vial.webp";
+import brandLogo from "@/assets/legacyrx-burgundy.webp";
+import footerLogo from "@/assets/legacyrx-cream.webp";
 import { useFromPrices } from "@/hooks/use-live-prices";
 
 export const Route = createFileRoute("/lander-1")({
@@ -219,7 +219,7 @@ function Lander1Page() {
       </Link>
 
       <nav className="nav">
-        <img loading="lazy" decoding="async" src={brandLogo.url} alt="LegacyRX" style={{ height: 36, width: "auto", display: "block" }} />
+        <img loading="lazy" decoding="async" src={brandLogo} alt="LegacyRX" style={{ height: 36, width: "auto", display: "block" }} />
       </nav>
 
       <section className="hero">
@@ -230,7 +230,7 @@ function Lander1Page() {
         <div className="pcards">
           <div className="pcard">
             <div className="ptag v">Best Value</div>
-            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={semaVial.url} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
+            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={semaVial} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
             <div className="pname">Semaglutide</div>
             <div className="ptype">Compounded GLP-1</div>
             <div className="prow"><span className="pprice">{semaText}</span><span className="pper">/ mo</span></div>
@@ -246,7 +246,7 @@ function Lander1Page() {
           </div>
           <div className="pcard pop">
             <div className="ptag">Most Popular</div>
-            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={tirzVial.url} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
+            <Link to="/qualify" style={{ display: "block" }}><img loading="lazy" decoding="async" src={tirzVial} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
             <div className="pname">Tirzepatide</div>
             <div className="ptype">Compounded GLP-1 + GIP</div>
             <div className="prow"><span className="pprice">{tirzText}</span><span className="pper">/ mo</span></div>
@@ -352,7 +352,7 @@ function Lander1Page() {
       </section>
 
       <footer className="l1foot">
-        <img loading="lazy" decoding="async" src={footerLogo.url} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", margin: "0 auto 14px", filter: "brightness(0) invert(1)" }} />
+        <img loading="lazy" decoding="async" src={footerLogo} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", margin: "0 auto 14px", filter: "brightness(0) invert(1)" }} />
         <div className="disc">LegacyRX is a telehealth and pharmacy-fulfillment platform, not a medical practice. All prescribing decisions are made independently by a licensed clinician. Compounded medications are not FDA-approved; the FDA does not evaluate them for safety, effectiveness, or quality. Individual results vary. Not everyone qualifies. In an emergency call 9-1-1.</div>
         <div>
           <Link to="/privacy-policy">Privacy</Link> · <Link to="/hipaa-notice">HIPAA</Link> · <Link to="/important-safety-information">Safety Info</Link> · <Link to="/terms-of-use">Terms</Link>

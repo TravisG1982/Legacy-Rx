@@ -1,5 +1,5 @@
-import hipaaLogo from "../assets/hipaa-compliant-transparent.webp.asset.json";
-import legitScriptLogo from "../assets/legitscript-certified.webp.asset.json";
+import hipaaLogo from "../assets/hipaa-compliant-transparent.webp";
+import legitScriptLogo from "../assets/legitscript-certified.webp";
 
 type Props = { variant?: "default" | "footer" };
 
@@ -10,7 +10,7 @@ export function TrustBadges({ variant = "default" }: Props) {
       <img
         loading="lazy"
         decoding="async"
-        src={hipaaLogo.url}
+        src={hipaaLogo}
         alt="HIPAA Compliant"
         style={{
           height: 64,
@@ -28,7 +28,7 @@ export function TrustBadges({ variant = "default" }: Props) {
         <img
           loading="lazy"
           decoding="async"
-          src={legitScriptLogo.url}
+          src={legitScriptLogo}
           alt="LegitScript Certified"
           style={{ height: 64, width: "auto", display: "block" }}
         />

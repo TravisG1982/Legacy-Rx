@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { clearPromo } from "@/lib/funnel-store";
-import semaVial from "@/assets/semaglutide-vial.webp.asset.json";
-import tirzVial from "@/assets/tirzepatide-vial.webp.asset.json";
-import brandLogo from "@/assets/legacyrx-burgundy.webp.asset.json";
-import footerLogo from "@/assets/legacyrx-cream.webp.asset.json";
+import semaVial from "@/assets/semaglutide-vial.webp";
+import tirzVial from "@/assets/tirzepatide-vial.webp";
+import brandLogo from "@/assets/legacyrx-burgundy.webp";
+import footerLogo from "@/assets/legacyrx-cream.webp";
 import { useFromPrices } from "@/hooks/use-live-prices";
 import { useOfferDeadline } from "@/hooks/use-offer-deadline";
 import { trackGa4 } from "@/lib/analytics";
 import { MEDS } from "@/lib/legacyrx-data";
-import hipaaLogo from "@/assets/hipaa-compliant-transparent.webp.asset.json";
-import legitScriptLogo from "@/assets/legitscript-certified.webp.asset.json";
+import hipaaLogo from "@/assets/hipaa-compliant-transparent.webp";
+import legitScriptLogo from "@/assets/legitscript-certified.webp";
 
 export const Route = createFileRoute("/lander-2")({
   head: () => ({
@@ -402,7 +402,7 @@ function Lander2Page() {
       </Link>
 
       <nav className="nav">
-        <img loading="lazy" decoding="async" src={brandLogo.url} alt="LegacyRX" style={{ height: 36, width: "auto", display: "block" }} />
+        <img loading="lazy" decoding="async" src={brandLogo} alt="LegacyRX" style={{ height: 36, width: "auto", display: "block" }} />
         <Link to={CTA_TARGET} className="btn btn-gold navcta" onClick={() => ctaClick("nav")}>
           Get started →
         </Link>
@@ -431,7 +431,7 @@ function Lander2Page() {
         <div className="pcards">
           <div className="pcard">
             <div className="ptag v">Best Value</div>
-            <Link to={CTA_TARGET} style={{ display: "block" }} onClick={() => ctaClick("sema_image")}><img fetchPriority="high" decoding="async" width={230} height={230} src={semaVial.url} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
+            <Link to={CTA_TARGET} style={{ display: "block" }} onClick={() => ctaClick("sema_image")}><img fetchPriority="high" decoding="async" width={230} height={230} src={semaVial} alt="Compounded Semaglutide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
             <div className="pname">Semaglutide</div>
             <div className="ptype">Compounded GLP-1</div>
             <div className="pblock">
@@ -459,7 +459,7 @@ function Lander2Page() {
           </div>
           <div className="pcard pop">
             <div className="ptag">Most Popular</div>
-            <Link to={CTA_TARGET} style={{ display: "block" }} onClick={() => ctaClick("tirz_image")}><img fetchPriority="high" decoding="async" width={230} height={230} src={tirzVial.url} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
+            <Link to={CTA_TARGET} style={{ display: "block" }} onClick={() => ctaClick("tirz_image")}><img fetchPriority="high" decoding="async" width={230} height={230} src={tirzVial} alt="Compounded Tirzepatide vial" style={{ display: "block", margin: "8px auto 14px", height: 230, width: "auto", objectFit: "contain", cursor: "pointer" }} /></Link>
             <div className="pname">Tirzepatide</div>
             <div className="ptype">Compounded GLP-1 + GIP</div>
             <div className="pblock">
@@ -612,7 +612,7 @@ function Lander2Page() {
           <div className="trusth">Certified &amp; accredited</div>
           <div className="certgrid">
             <div className="cert">
-              <img loading="lazy" decoding="async" src={hipaaLogo.url} alt="HIPAA Compliant" />
+              <img loading="lazy" decoding="async" src={hipaaLogo} alt="HIPAA Compliant" />
               <div className="cl">Private &amp; Secure</div>
             </div>
             <div className="cert">
@@ -622,7 +622,7 @@ function Lander2Page() {
                 rel="noopener noreferrer"
                 aria-label="LegitScript Certified - verify"
               >
-                <img loading="lazy" decoding="async" src={legitScriptLogo.url} alt="LegitScript Certified" />
+                <img loading="lazy" decoding="async" src={legitScriptLogo} alt="LegitScript Certified" />
               </a>
               <div className="cl">Verified Pharmacy</div>
             </div>
@@ -661,7 +661,7 @@ function Lander2Page() {
       </section>
 
       <footer className="l1foot">
-        <img loading="lazy" decoding="async" src={footerLogo.url} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", margin: "0 auto 14px", filter: "brightness(0) invert(1)" }} />
+        <img loading="lazy" decoding="async" src={footerLogo} alt="LegacyRX" style={{ height: 40, width: "auto", display: "block", margin: "0 auto 14px", filter: "brightness(0) invert(1)" }} />
         <div className="disc">LegacyRX is a telehealth and pharmacy-fulfillment platform, not a medical practice. All prescribing decisions are made independently by a licensed clinician. Compounded medications are not FDA-approved; the FDA does not evaluate them for safety, effectiveness, or quality. Individual results vary. Not everyone qualifies. In an emergency call 9-1-1.</div>
         <div>
           <Link to="/privacy-policy">Privacy</Link> · <Link to="/hipaa-notice">HIPAA</Link> · <Link to="/important-safety-information">Safety Info</Link> · <Link to="/terms-of-use">Terms</Link>

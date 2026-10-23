@@ -26,6 +26,7 @@ export type LeadPayload = {
   age18?: string | null;
   onGlp1?: string | null;
   emailConsent?: boolean;
+  emailMarketingConsent?: boolean;
   smsTransactionalConsent?: boolean;
   smsMarketingConsent?: boolean;
   stage?: LeadStage;

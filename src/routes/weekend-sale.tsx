@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import semaVial from "@/assets/semaglutide-vial.webp.asset.json";
-import tirzVial from "@/assets/tirzepatide-vial.webp.asset.json";
-import hipaaLogo from "@/assets/hipaa-compliant-transparent.webp.asset.json";
-import legitScriptLogo from "@/assets/legitscript-certified.webp.asset.json";
+import semaVial from "@/assets/semaglutide-vial.webp";
+import tirzVial from "@/assets/tirzepatide-vial.webp";
+import hipaaLogo from "@/assets/hipaa-compliant-transparent.webp";
+import legitScriptLogo from "@/assets/legitscript-certified.webp";
 import heroImg from "@/assets/ldo-hero.webp";
 import heroImgSm from "@/assets/ldo-hero-sm.webp";
 import step1Img from "@/assets/ldo-step1.webp";
@@ -419,7 +419,7 @@ function WeekendSalePage() {
             <div className="cards">
               <Link to={CTA} search={CTA_SEARCH} className="card" onClick={() => click("hero_card_sema")}>
                 <span className="tag">Most popular</span>
-                <img className="vial" width={120} height={120} loading="lazy" decoding="async" src={semaVial.url} alt="Compounded Semaglutide vial" />
+                <img className="vial" width={120} height={120} loading="lazy" decoding="async" src={semaVial} alt="Compounded Semaglutide vial" />
                 <div className="nm">Semaglutide</div>
                 <div className="dose">Doses included: 0.25mg - 2.5mg</div>
                 <div>
@@ -430,7 +430,7 @@ function WeekendSalePage() {
               </Link>
               <Link to={CTA} search={CTA_SEARCH} className="card" onClick={() => click("hero_card_tirz")}>
                 <span className="tag">Strongest option</span>
-                <img className="vial" width={120} height={120} loading="lazy" decoding="async" src={tirzVial.url} alt="Compounded Tirzepatide vial" />
+                <img className="vial" width={120} height={120} loading="lazy" decoding="async" src={tirzVial} alt="Compounded Tirzepatide vial" />
                 <div className="nm">Tirzepatide</div>
                 <div className="dose">Doses included: 2.5mg - 15mg</div>
                 <div>
@@ -707,14 +707,14 @@ function WeekendSalePage() {
             <p>HIPAA-secure platform, LegitScript certified, US-licensed providers and registered pharmacies.</p>
           </div>
           <div className="badges">
-            <img loading="lazy" decoding="async" src={hipaaLogo.url} alt="HIPAA Compliant" />
+            <img loading="lazy" decoding="async" src={hipaaLogo} alt="HIPAA Compliant" />
             <a
               href="https://www.legitscript.com/websites/?checker_keywords=legacyrx.net"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="LegitScript Certified - verify"
             >
-              <img loading="lazy" decoding="async" src={legitScriptLogo.url} alt="LegitScript Certified" />
+              <img loading="lazy" decoding="async" src={legitScriptLogo} alt="LegitScript Certified" />
             </a>
           </div>
         </div>

@@ -14,9 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_email_claims: {
+        Row: {
+          email: string
+          user_id: string
+          claimed_at: string
+        }
+        Insert: {
+          email: string
+          user_id: string
+          claimed_at?: string
+        }
+        Update: {
+          email?: string
+          user_id?: string
+          claimed_at?: string
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           created_at: string
+          delivery_accepted_at: string | null
+          delivery_attempted_at: string | null
+          delivery_status: string
           email: string
           id: string
           marketing_consent: boolean
@@ -27,6 +48,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_accepted_at?: string | null
+          delivery_attempted_at?: string | null
+          delivery_status?: string
           email: string
           id?: string
           marketing_consent?: boolean
@@ -37,6 +61,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_accepted_at?: string | null
+          delivery_attempted_at?: string | null
+          delivery_status?: string
           email?: string
           id?: string
           marketing_consent?: boolean
@@ -95,6 +122,7 @@ export type Database = {
           created_at: string
           email: string | null
           email_consent: boolean
+          email_marketing_consent: boolean
           first_name: string | null
           id: string
           last_name: string | null
@@ -112,6 +140,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           email_consent?: boolean
+          email_marketing_consent?: boolean
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -129,6 +158,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           email_consent?: boolean
+          email_marketing_consent?: boolean
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -406,6 +436,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_verified_guest_records: { Args: { _user_id: string }; Returns: string }
       redeem_coupon: { Args: { _code: string }; Returns: undefined }
     }
     Enums: {

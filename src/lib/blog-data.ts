@@ -1,7 +1,7 @@
-import heroImage from "../assets/legacy-rx-hero.webp.asset.json";
+import heroImage from "../assets/legacy-rx-hero.webp";
 import trtImage from "../assets/products/trt_inj.jpg";
 import nadImage from "../assets/products/nad.jpg";
-import semaVialImage from "../assets/semaglutide-vial.webp.asset.json";
+import semaVialImage from "../assets/semaglutide-vial.webp";
 
 export type BlogSection = {
   heading: string;
@@ -37,7 +37,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dateLabel: "October 4, 2026",
     author: "LegacyRX Care Team",
     category: "Weight Management",
-    image: semaVialImage.url,
+    image: semaVialImage,
     imageAlt: "Semaglutide treatment vial",
     intro: [
       "You’ve heard the name Ozempic more times than you can count. It’s on the news, in your social feed, and probably came up at your last dinner party. But when you start looking seriously into GLP-1 weight loss programs, you run into something that raises questions: compounded semaglutide. Same active ingredient. Fraction of the price.",
@@ -147,7 +147,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dateLabel: "October 4, 2026",
     author: "LegacyRX Care Team",
     category: "Weight Management",
-    image: heroImage.url,
+    image: heroImage,
     imageAlt: "Adults enjoying an active day outdoors",
     intro: [
       "Most GLP-1 programs have a pricing problem they don’t talk about openly. The problem isn’t the starting price — that often looks reasonable. The problem is what happens when your dose goes up, which it will, because that’s how GLP-1 therapy works.",
@@ -247,7 +247,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dateLabel: "October 4, 2026",
     author: "LegacyRX Care Team",
     category: "Weight Management",
-    image: heroImage.url,
+    image: heroImage,
     imageAlt: "Adults enjoying an active day outdoors",
     intro: [
       "Starting a weight-management program can bring plenty of questions. A responsible telehealth experience should make the process clear, protect your privacy, and keep medical decisions with a licensed clinician.",
