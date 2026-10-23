@@ -53,7 +53,7 @@ function AccountPage() {
     setBusy(true);
     try {
       const r = await portal({
-        data: { subscriptionId: sub.stripe_subscription_id, returnUrl: window.location.href },
+        data: { subscriptionId: sub.stripe_subscription_id },
       });
       if ("error" in r) return setErr(r.error);
       window.open(r.url, "_blank", "noopener");

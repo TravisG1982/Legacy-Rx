@@ -11,11 +11,11 @@ export async function fuseBrandFetch<T>(path: string, init: { method?: string; b
     headers: { "x-api-key": key, "Content-Type": "application/json", Accept: "application/json" },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
-  const text = await res.text();
   if (!res.ok) {
-    console.error(`FuseHealth ${path} failed [${res.status}]: ${text}`);
-    throw new Error(`FuseHealth request failed [${res.status}]: ${text.slice(0, 300)}`);
+    // Provider error bodies can echo intake details. Do not log or expose them.
+    throw new Error(`FuseHealth request failed [${res.status}].`);
   }
+  const text = await res.text();
   return (text ? JSON.parse(text) : {}) as T;
 }
 

@@ -10,6 +10,10 @@ function str(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
 }
 
+function safeEventPart(value: string | undefined): string {
+  return value && /^[a-z0-9_]{1,40}$/i.test(value) ? value : "unknown";
+}
+
 function patchFuze(order: OrderRow, patch: Partial<OrderRow>) {
   return import("@/integrations/supabase/client.server").then(({ supabaseAdmin }) =>
     supabaseAdmin.from("orders").update(patch as never).eq("id", order.id),
@@ -49,7 +53,7 @@ async function handleFuzeWebhook(body: AnyRecord) {
   const patientToken = str(data['patient_token']) ?? str(data['patientToken']);
   const prescriptionToken = str(data['prescription_token']) ?? str(data['prescriptionToken']);
   const fillRequestId = str(data['request_id']) ?? str(data['fill_request_id']) ?? str(data['order_token']);
-  const lastEvent = `${type} ${status || state || "event"}`.slice(0, 280);
+  const lastEvent = `${safeEventPart(type)} ${safeEventPart(status || state || "event")}`;
 
   switch (type.toUpperCase()) {
     case "CONSULT": {
@@ -88,7 +92,7 @@ async function handleFuzeWebhook(body: AnyRecord) {
         await patchFuze(order, { fuzerx_status: "order_processing", status: "order_processing", fuzerx_last_event: lastEvent });
       } else {
         await patchFuze(order, { fuzerx_status: "order_error", status: "order_error", fuzerx_last_event: lastEvent });
-        await logFuzeFailure(order, `FuzeRx order error: ${lastEvent} code=${str(data['error_code']) ?? ""} ${str(data['message']) ?? ""}`);
+        await logFuzeFailure(order, `FuzeRx order error: ${lastEvent}`);
       }
       return;
     }
@@ -115,7 +119,7 @@ async function handleFuzeWebhook(body: AnyRecord) {
       // Unknown type: update the order note when we can match one, else ignore.
       const order = await findOrderByFuzeRef({ consultId, patientToken, fillRequestId });
       if (order) await patchFuze(order, { fuzerx_last_event: lastEvent });
-      console.log("Unhandled FuzeRx webhook:", type, lastEvent);
+      console.log("Unhandled FuzeRx webhook type.");
     }
   }
 }
@@ -133,8 +137,8 @@ export const Route = createFileRoute("/api/public/webhooks/fuzehealth")({
           const body = (await request.json()) as AnyRecord;
           await handleFuzeWebhook(body);
           return Response.json({ received: true });
-        } catch (e) {
-          console.error("FuzeRx webhook error:", e);
+        } catch {
+          console.error("FuzeRx webhook request failed.");
           return new Response("Webhook error", { status: 400 });
         }
       },

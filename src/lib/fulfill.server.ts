@@ -106,7 +106,7 @@ async function patchOrder(id: string, patch: Partial<OrderRow>) {
   // Partial<OrderRow> mirrors the generated Update type; the SDK's excess-
   // property check can't infer it, so cast at the call boundary.
   const { error } = await supabaseAdmin.from("orders").update(patch as never).eq("id", id);
-  if (error) console.error("orders update failed", error.message);
+  if (error) console.error("Order update failed.");
 }
 
 export async function getOrder(id: string): Promise<OrderRow | null> {
@@ -192,7 +192,7 @@ export async function startFulfillment(
     });
     return { ...order, fuzerx_patient_token: patientToken, fuzerx_consult_id: consult, fuzerx_status: "consult_sent" };
   } catch (e) {
-    const msg = e instanceof FuzeRxError ? `${e.status} ${e.code ?? ""} ${e.message}` : String(e);
+    const msg = e instanceof FuzeRxError ? `FuzeRx request failed (${e.status})` : "Consult handoff failed";
     await patchOrder(order.id, { fuzerx_status: "consult_failed", fuzerx_last_event: msg.slice(0, 300) });
     await logFailure(order, `FuzeRx consult failed: ${msg}`);
     return { ...order, fuzerx_status: "consult_failed" };
@@ -232,7 +232,7 @@ export async function dispatchFill(
     });
     return { ...order, fuzerx_fill_request_id: res.requestId, fuzerx_status: "fill_requested" };
   } catch (e) {
-    const msg = e instanceof FuzeRxError ? `${e.status} ${e.code ?? ""} ${e.message}` : String(e);
+    const msg = e instanceof FuzeRxError ? `FuzeRx request failed (${e.status})` : "Fill handoff failed";
     await patchOrder(order.id, { fuzerx_status: "fill_failed", fuzerx_last_event: msg.slice(0, 300) });
     await logFailure(order, `FuzeRx fill request failed: ${msg}`);
     return { ...order, fuzerx_status: "fill_failed" };
@@ -291,13 +291,13 @@ export async function releaseOrderPayment(order: OrderRow): Promise<OrderRow> {
       fuzerx_status: "consult_rejected",
       fuzerx_last_event: "Refunded after provider review rejected the consult",
     });
-  } catch (e) {
-    console.error("refund failed", e);
+  } catch {
+    console.error("Refund after consult rejection failed.");
     await patchOrder(order.id, {
       fuzerx_status: "consult_rejected",
-      fuzerx_last_event: `Consult rejected; refund failed: ${String(e).slice(0, 200)}`,
+      fuzerx_last_event: "Consult rejected; refund failed",
     });
-    await logFailure(order, `Refund after consult rejection failed: ${String(e).slice(0, 300)}`);
+    await logFailure(order, "Refund after consult rejection failed");
   }
   return { ...order, fuzerx_status: "consult_rejected" };
 }

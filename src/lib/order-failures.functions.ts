@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const failureSchema = z.object({
+const historicalInput = z.object({
   sessionId: z.string().trim().max(80).optional(),
   email: z.string().trim().max(255).optional(),
   firstName: z.string().trim().max(100).optional(),
@@ -17,28 +17,10 @@ const failureSchema = z.object({
 });
 
 /**
- * Records a checkout attempt that the order service rejected, so blocked
- * purchases are visible instead of silently lost. Writes with the service-role
- * client inside the handler; the table has no anon/authenticated grants, so
- * nothing can be read back from the browser.
+ * The historical checkout page still imports this function, but that checkout
+ * is disabled. A public caller must not be able to write arbitrary contact or
+ * medical details to order_failures through the service-role client.
  */
 export const logOrderFailure = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => failureSchema.parse(data))
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.from("order_failures").insert({
-      session_id: data.sessionId ?? null,
-      email: data.email ?? null,
-      first_name: data.firstName ?? null,
-      last_name: data.lastName ?? null,
-      phone: data.phone ?? null,
-      state: data.state ?? null,
-      medication: data.medication ?? null,
-      plan_id: data.planId ?? null,
-      product_id: data.productId ?? null,
-      coupon_code: data.couponCode ?? null,
-      amount: data.amount ?? null,
-      reason: data.reason ?? null,
-    });
-    return { ok: true };
-  });
+  .validator((data: unknown) => historicalInput.parse(data))
+  .handler(async () => ({ ok: false as const, reason: "unavailable" as const }));

@@ -38,6 +38,12 @@ The `orders` table contains both current FuseHealth fields and Stripe/FuzeRx fie
 
 The original seven tables have `GRANT ALL TO service_role`; `account_email_claims` grants only `SELECT` and `INSERT`. The `service_role` key belongs only in server-side code and must not be exposed in the React client. RLS does not replace reviews of server endpoints, secret handling, or audit logging.
 
+### Access review, October 23
+
+The hosted project's ten public tables all had RLS enabled. An anonymous Data API read of each table returned no rows (or a permissions error for the restricted tables), and an anonymous call to the verified-email claim function was denied. The older tables retain client-role table grants, but have no `anon` or `authenticated` row policies; RLS blocks their rows. No grant-changing migration was applied for this review.
+
+Automated server-function tests cover anonymous and patient denial for admin actions, staff permissions, owner access, MFA enforcement, and immediate denial after role revocation. Account-order tests cover verified email, ownership, and foreign order numbers. The public legacy order-failure writer was disabled because it allowed arbitrary details to be inserted with the service key. Provider responses and raw exceptions were removed from affected public responses and logs. Local production-build static files did not contain the nonempty local service key or session secret. These checks use synthetic data and do not replace a production deployment review or a full HIPAA assessment.
+
 ## Indexes and other schema objects
 
 - `funnel_leads`: primary key on `id`, unique `session_id`, and an index on `created_at DESC`.
