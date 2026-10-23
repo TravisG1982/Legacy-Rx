@@ -86,14 +86,14 @@ export const upsertFunnelLead = createServerFn({ method: "POST" })
         .from("funnel_leads")
         .update(patch as never)
         .eq("session_id", data.sessionId);
-      if (error) throw new Error(error.message);
+      if (error) throw new Error("Could not save lead.");
     } else {
       // Concurrent first writes can both see "no row"; upsert on the unique
       // session_id so the loser updates instead of failing.
       const { error } = await supabaseAdmin
         .from("funnel_leads")
         .upsert(patch as never, { onConflict: "session_id" });
-      if (error) throw new Error(error.message);
+      if (error) throw new Error("Could not save lead.");
     }
 
 

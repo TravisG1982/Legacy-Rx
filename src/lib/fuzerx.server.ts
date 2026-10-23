@@ -42,11 +42,9 @@ async function fuzerxFetch<T>(
     /* non-JSON error body */
   }
   if (!res.ok) {
-    throw new FuzeRxError(
-      (json["error"] as string) || (json["message"] as string) || text || `FuzeRx ${res.status}`,
-      res.status,
-      typeof json["code"] === "string" ? (json["code"] as string) : undefined,
-    );
+    // An upstream error body can include patient or intake fields. Keep only
+    // the numeric status in locally stored errors and server logs.
+    throw new FuzeRxError("FuzeRx request failed", res.status);
   }
   return json as T;
 }

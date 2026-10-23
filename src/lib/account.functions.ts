@@ -1,5 +1,6 @@
 // src/lib/account.functions.ts — signed-in customer's orders, plan and billing portal.
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -62,7 +63,7 @@ export const getMyOrderStatus = createServerFn({ method: "POST" })
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ subscriptionId: z.string().min(1), returnUrl: z.string().url() }).parse(d),
+    z.object({ subscriptionId: z.string().min(1) }).parse(d),
   )
   .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
     const { verifiedAccountEmail, sameVerifiedEmail } = await import("./account-access.server");
@@ -81,14 +82,16 @@ export const createPortalSession = createServerFn({ method: "POST" })
     if (sub.environment !== "sandbox" && sub.environment !== "live") {
       return { error: "Billing is not available for this plan." };
     }
-    const { createStripeClient, getStripeErrorMessage } = await import("./stripe.server");
+    const request = getRequest();
+    if (!request) return { error: "Billing is unavailable right now." };
+    const { createStripeClient } = await import("./stripe.server");
     try {
       const portal = await createStripeClient(sub.environment).billingPortal.sessions.create({
         customer: sub.stripe_customer_id,
-        return_url: data.returnUrl,
+        return_url: new URL("/account", request.url).toString(),
       });
       return { url: portal.url };
-    } catch (e) {
-      return { error: getStripeErrorMessage(e) };
+    } catch {
+      return { error: "Could not open billing right now." };
     }
   });

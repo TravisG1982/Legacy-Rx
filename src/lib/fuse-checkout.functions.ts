@@ -57,7 +57,7 @@ export const createFuseCheckout = createServerFn({ method: "POST" })
       fuzerx_last_event: "FuseHealth checkout started",
     } as never);
     if (error) {
-      console.error("Could not save FuseHealth checkout session:", error);
+      console.error("Could not save FuseHealth checkout session.");
       throw new Error("We couldn't open the secure form. Please try again.");
     }
     return { embedUrl: s.embedUrl, sessionId: s.sessionId };

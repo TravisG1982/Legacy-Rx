@@ -128,7 +128,8 @@ export const Route = createFileRoute("/api/public/meta-capi")({
         event["event_source_url"] = `${new URL(request.url).origin}/`;
 
         const payload: Record<string, unknown> = { data: [event] };
-        const testEventCode = str(body["test_event_code"], 64);
+        const requestedTestCode = str(body["test_event_code"], 32);
+        const testEventCode = /^TEST\d{1,12}$/.test(requestedTestCode) ? requestedTestCode : "";
         if (testEventCode) payload["test_event_code"] = testEventCode;
 
         try {
@@ -140,33 +141,15 @@ export const Route = createFileRoute("/api/public/meta-capi")({
               body: JSON.stringify(payload),
             },
           );
-          const text = await res.text();
           if (!res.ok) {
-            console.error(`Meta CAPI failed [${res.status}]: ${text}`);
-            return json({ ok: false, status: res.status, meta: text }, 502);
+            // The provider response may echo submitted identifiers. Never
+            // return or log its raw body.
+            console.error(`Meta CAPI failed [${res.status}].`);
+            return json({ ok: false, error: "Upstream request failed" }, 502);
           }
-          let meta: unknown = text;
-          try {
-            meta = JSON.parse(text);
-          } catch {
-            // keep raw text
-          }
-          // Temporary delivery trail: lets us confirm from server logs which
-          // events Meta actually accepted, without inferring from the browser.
-          const received =
-            typeof meta === "object" && meta !== null
-              ? (meta as { events_received?: number }).events_received
-              : undefined;
-          const trace =
-            typeof meta === "object" && meta !== null
-              ? (meta as { fbtrace_id?: string }).fbtrace_id
-              : undefined;
-          console.log(
-            `Meta CAPI ok event=${eventName} dataset=${datasetId} received=${received ?? "?"} trace=${trace ?? "?"} test_code=${testEventCode || "none"}`,
-          );
-          return json({ ok: true, meta }, 200);
-        } catch (err) {
-          console.error("Meta CAPI request error", err);
+          return json({ ok: true }, 200);
+        } catch {
+          console.error("Meta CAPI request failed.");
           return json({ ok: false, error: "Upstream request failed" }, 502);
         }
       },

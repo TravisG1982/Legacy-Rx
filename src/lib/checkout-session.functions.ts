@@ -195,9 +195,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       await supabaseAdmin.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id);
 
       return { mode: "stripe", clientSecret: session.client_secret, orderNumber };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { error: msg.startsWith("Stripe") || /stripe/i.test(msg) ? msg : `Checkout error: ${msg}` };
+    } catch {
+      return { error: "Could not start checkout. Please try again." };
     }
   });
 

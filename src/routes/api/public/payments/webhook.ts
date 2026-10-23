@@ -18,7 +18,7 @@ async function markOrderPaid(session: AnySession, env: StripeEnv, order: OrderRo
   // Guard the amount: the charged total must match the order total.
   const paid = Number(session.amount_total ?? 0) / 100;
   if (Number.isFinite(paid) && Math.abs(paid - Number(order.total)) > 0.01) {
-    console.error("Webhook amount mismatch", order.order_number, paid, order.total);
+    console.error("Webhook amount mismatch.");
     await supabaseAdmin
       .from("orders")
       .update({
@@ -48,8 +48,8 @@ async function markOrderPaid(session: AnySession, env: StripeEnv, order: OrderRo
       const pm = await stripe.paymentMethods.retrieve(pmId);
       if (pm.card?.last4) cardLast4 = pm.card.last4;
     }
-  } catch (e) {
-    console.error("Card/subscription lookup failed", e);
+  } catch {
+    console.error("Card/subscription lookup failed.");
   }
 
   if (order.status === "paid") return order; // already finalized (webhook retry)
@@ -77,8 +77,8 @@ async function markOrderPaid(session: AnySession, env: StripeEnv, order: OrderRo
   try {
     const md = (session as { metadata?: Record<string, string> | null }).metadata ?? {};
     await startFulfillment(paidOrder, { onGlp1: md.onGlp1 || null, conditions: md.conditions || null });
-  } catch (e) {
-    console.error("Fulfillment start failed", e);
+  } catch {
+    console.error("Fulfillment start failed.");
   }
   return paidOrder;
 }
@@ -158,7 +158,7 @@ async function handleWebhook(req: Request, env: StripeEnv) {
       break;
     }
     default:
-      console.log("Unhandled payment event:", event.type);
+      console.log("Unhandled payment event type.");
   }
 }
 
@@ -181,7 +181,7 @@ async function recordRenewal(inv: AnySession, env: StripeEnv) {
     .eq("is_renewal", false)
     .maybeSingle();
   if (!first) {
-    console.error("Renewal for unknown subscription", subId);
+    console.error("Renewal for unknown subscription.");
     return;
   }
   const { productFor } = await import("@/lib/legacyrx-data");
@@ -219,8 +219,8 @@ async function recordRenewal(inv: AnySession, env: StripeEnv) {
   const { startFulfillment } = await import("@/lib/fulfill.server");
   try {
     await startFulfillment(renewal as OrderRow);
-  } catch (e) {
-    console.error("Renewal fulfillment failed", e);
+  } catch {
+    console.error("Renewal fulfillment failed.");
   }
 }
 
@@ -230,15 +230,15 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
       POST: async ({ request }) => {
         const rawEnv = new URL(request.url).searchParams.get("env");
         if (rawEnv !== "sandbox" && rawEnv !== "live") {
-          console.error("Webhook received with invalid or missing env query parameter:", rawEnv);
+          console.error("Webhook received with invalid or missing environment.");
           return Response.json({ received: true, ignored: "invalid env" });
         }
         const env: StripeEnv = rawEnv;
         try {
           await handleWebhook(request, env);
           return Response.json({ received: true });
-        } catch (e) {
-          console.error("Webhook error:", e);
+        } catch {
+          console.error("Payment webhook request failed.");
           return new Response("Webhook error", { status: 400 });
         }
       },
