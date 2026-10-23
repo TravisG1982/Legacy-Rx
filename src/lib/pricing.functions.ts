@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { AdminPricingRow, LivePrices } from "./pricing-types";
 
-/** Public read: current LegacyRx (Site ID 533) prices, product_id -> price. */
+/** Public read: prices from the checked-in LegacyRX catalog, product_id -> price. */
 export const getLivePrices = createServerFn({ method: "GET" }).handler(
   async (): Promise<LivePrices> => {
     const { fetchLivePrices } = await import("./pricing.server");
@@ -40,7 +40,7 @@ export const adminLogout = createServerFn({ method: "POST" }).handler(async () =
   return { ok: true as const };
 });
 
-/** Gated: product list + live prices for the admin dashboard. */
+/** Gated: product list and display prices for the admin dashboard. */
 export const adminListPricing = createServerFn({ method: "GET" }).handler(async () => {
   const { adminSession, fetchCatalog, fetchLivePrices } = await import("./pricing.server");
   const { PRICED_PRODUCT_IDS } = await import("./pricing-types");
@@ -68,7 +68,7 @@ export const adminListPricing = createServerFn({ method: "GET" }).handler(async 
   }
 });
 
-/** Gated: update a price, then re-read the GET API and verify persistence. */
+/** Historical update endpoint; price editing remains unavailable until an owned catalog exists. */
 export const adminUpdatePricing = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z

@@ -1,6 +1,6 @@
 # Legacy Rx Database
 
-Status as of October 21, 2026. Target Supabase project: **Legacy Rx**, project ID `qczeuhomxlmrorsdceri`. The application schema is `public`; authentication is managed by Supabase Auth.
+Status as of October 23, 2026. Target Supabase project: **Legacy Rx**, project ID `qczeuhomxlmrorsdceri`. The application schema is `public`; authentication is managed by Supabase Auth.
 
 ## Current state
 
@@ -16,7 +16,7 @@ Status as of October 21, 2026. Target Supabase project: **Legacy Rx**, project I
 | --- | --- | --- |
 | `funnel_leads` | Early intake data and contact consent. | `id` is a UUID primary key; `session_id` is required and unique. Includes name, email, phone, state, `age_18` and `on_glp1` answers, separate operational and marketing email consent flags, SMS consent flags, `stage`, `created_at`, and `updated_at`. |
 | `orders` | Orders and their payment, consultation, and fulfillment state. | `id` is a UUID primary key; `order_number` is unique. Includes customer details, medication, plan, product, amounts, `status`, `payment_mode`, `environment`, `user_id`, and Stripe, FuzeRx, and FuseHealth fields (`fuse_order_id`, `fuse_session_id`). Non-null `fuse_order_id` values are unique. |
-| `contact_messages` | Contact form submissions. | `id` is a UUID primary key and doubles as the submission ID. `name`, `email`, `phone`, and `message` are required. Includes consent flags, delivery status and timestamps, and `created_at`. |
+| `contact_messages` | Historical contact form submissions; new submissions are paused. | `id` is a UUID primary key and doubles as the submission ID. `name`, `email`, `phone`, and `message` are required. Includes consent flags, delivery status and timestamps, and `created_at`. |
 | `order_failures` | Diagnostic records for failed order creation or processing. | `id` is a UUID primary key. Optional session and contact details, product, amount, `reason`, and `created_at`. |
 | `subscriptions` | Subscription and billing-period records. | `id` is a UUID primary key; `stripe_subscription_id` is required and unique. Includes `stripe_customer_id`, `email`, `price_id`, status, billing periods, cancellation flag, `environment`, `user_id`, and timestamps. |
 | `account_email_claims` | Reserves a normalized verified email for one account while guest records are claimed. | `email` is the primary key; `user_id` identifies the account. RLS is enabled, and `anon` and `authenticated` have no table privileges. |
@@ -71,3 +71,5 @@ The workflow for future migrations is described in [`supabase/README.md`](./READ
 On October 21, 2026, `20261021120000_claim_verified_guest_records.sql` and `20261021120100_revoke_account_email_claims_client_grants.sql` were applied to the hosted Legacy Rx project. The first adds an atomic, verified-email claim for guest orders and subscriptions, reserves each normalized email for one account, and makes FuseHealth and Stripe session identifiers unique. The second explicitly revokes Supabase's default client-role table grants. Their migration-history entries, schema objects, RLS, and grants were checked in the hosted project.
 
 On October 21, 2026, `20261021120200_contact_delivery_and_email_marketing.sql` was applied to the same project. The migration history contains one entry for version `20261021120200`; `email_marketing_consent` and all three contact delivery columns were verified in `information_schema`. Existing contact rows default to `unconfirmed` because their delivery outcomes cannot be inferred. New rows explicitly start as `pending`.
+
+On October 23, 2026, the client confirmed that WhiteLabelMD is retired. The developer temporarily left the contact page visible with disabled fields; the server function returns `unavailable` without writing to `contact_messages` or forwarding a request. The client has not yet approved this temporary form behavior. Existing rows and applied migrations remain for history. A new client-controlled support delivery route and its handling of accidentally submitted medical information must be agreed and verified before reopening the form.

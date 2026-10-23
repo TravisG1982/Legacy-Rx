@@ -170,7 +170,7 @@ function PricingDashboard({
         <div>
           <h1 style={{ fontSize: "1.4rem", margin: 0 }}>Product Pricing</h1>
           <p className="lx-muted" style={{ margin: "4px 0 0", fontSize: ".85rem" }}>
-            Prices come live from the LegacyRX pricing API (Site ID 533) and apply site-wide.
+            Display prices currently come from the LegacyRX catalog in code. Editing is paused until a LegacyRX-controlled pricing source is available.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -235,6 +235,7 @@ function PricingDashboard({
                       placeholder="0.00"
                       value={rs?.value ?? ""}
                       onChange={(e) => patch(row.productId, { value: e.target.value })}
+                      disabled
                       style={{
                         width: 110,
                         padding: "8px 10px",
@@ -247,8 +248,7 @@ function PricingDashboard({
                     <button
                       className="btn btn-primary"
                       style={{ padding: "8px 14px" }}
-                      disabled={rs?.busy}
-                      onClick={() => submit(row)}
+                      disabled
                     >
                       {rs?.busy ? "Updating..." : "Update"}
                     </button>
