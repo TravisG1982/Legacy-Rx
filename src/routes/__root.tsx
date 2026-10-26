@@ -22,7 +22,7 @@ import { purgeLegacyPromo } from "../lib/funnel-store";
 import { trackMeta } from "../lib/analytics";
 import { CONSENT_CHANGED_EVENT, isProtectedPage } from "../lib/analytics-consent";
 
-const FUNNEL_PATHS = new Set(["/qualify", "/checkout"]);
+const FUNNEL_PATHS = new Set(["/qualify"]);
 const CHROMELESS_PATHS = new Set([
   "/lander",
   "/lander-1",

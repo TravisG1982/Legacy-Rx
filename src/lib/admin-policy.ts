@@ -1,10 +1,10 @@
-export type AdminPermission = "view_leads" | "delete_leads" | "view_pricing" | "manage_coupons";
+export type AdminPermission = "view_leads" | "delete_leads" | "view_pricing";
 export type AdminRole = "owner" | "staff";
 export type PermissionFlags = Record<AdminPermission, boolean>;
 
 export function effectivePermissions(role: AdminRole, flags: PermissionFlags): PermissionFlags {
   return role === "owner"
-    ? { view_leads: true, delete_leads: true, view_pricing: true, manage_coupons: true }
+    ? { view_leads: true, delete_leads: true, view_pricing: true }
     : { ...flags };
 }
 

@@ -1,6 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { clearPromo } from "@/lib/funnel-store";
 import semaVial from "@/assets/semaglutide-vial.webp";
 import tirzVial from "@/assets/tirzepatide-vial.webp";
 import brandLogo from "@/assets/legacyrx-burgundy.webp";
@@ -369,7 +367,6 @@ function IconPharmacy() {
 
 
 function Lander2Page() {
-  useEffect(() => { clearPromo(); }, []);
   const { semaText, tirzText } = useFromPrices();
   const semaNow = Number(semaText.replace(/[^0-9.]/g, ""));
   const tirzNow = Number(tirzText.replace(/[^0-9.]/g, ""));

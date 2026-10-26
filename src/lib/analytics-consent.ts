@@ -54,7 +54,8 @@ export function isProtectedPage(pathname: string): boolean {
 export function isTrackingExcludedPage(pathname: string): boolean {
   return (
     isProtectedPage(pathname) ||
-    ["/qualify", "/checkout", "/contact-us", "/thank-you", "/not-eligible"].includes(pathname) ||
-    pathname.startsWith("/start/")
+    ["/qualify", "/contact-us", "/thank-you", "/not-eligible"].includes(pathname) ||
+    pathname.startsWith("/start/") ||
+    pathname.startsWith("/pay-test/")
   );
 }

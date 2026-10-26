@@ -1,9 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Wordmark } from "./Brand";
 import { OrderHelp } from "./OrderHelp";
 import { useFromPrices } from "@/hooks/use-live-prices";
-import { resolveCampaignCoupon } from "@/lib/coupon";
 import { OPEN_CONSENT_CHOICES_EVENT } from "@/lib/analytics-consent";
 
 export function FunnelShell({
@@ -17,17 +16,7 @@ export function FunnelShell({
   hideTrust?: boolean;
   children: ReactNode;
 }) {
-  const { sema, semaText } = useFromPrices();
-  // A campaign visitor should see the discounted from-price in the banner too.
-  const [promoPct, setPromoPct] = useState(0);
-  useEffect(() => {
-    // Only a promo in the current link counts - nothing is applied by default.
-    const fromUrl = new URLSearchParams(window.location.search).get("promo");
-    const c = resolveCampaignCoupon(fromUrl);
-    if (c?.valid && c.type === "percent") setPromoPct(Number(c.value ?? 0));
-  }, []);
-  const fromText =
-    promoPct > 0 && sema > 0 ? `$${(sema * (1 - promoPct / 100)).toFixed(2)}` : semaText;
+  const { semaText } = useFromPrices();
   return (
     <div className="funnel">
       <div className="funnel-logo">
@@ -41,7 +30,7 @@ export function FunnelShell({
       </div>
       <div className="offer-banner">
         <span className="pill">FLAT PRICING</span>
-        From {fromText}/mo · Free shipping
+        From {semaText}/mo · Free shipping
       </div>
 
       <div className="funnel-progress">

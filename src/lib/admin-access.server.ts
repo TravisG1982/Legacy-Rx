@@ -7,7 +7,7 @@ export type AdminAccess = { userId: string; role: AdminRole; permissions: Record
 export type AdminStatus = { state: "signed_out" | "forbidden" | "mfa_required" | "ready"; role?: AdminRole; permissions?: Record<AdminPermission, boolean> };
 
 const empty: Record<AdminPermission, boolean> = {
-  view_leads: false, delete_leads: false, view_pricing: false, manage_coupons: false,
+  view_leads: false, delete_leads: false, view_pricing: false,
 };
 
 function bearerToken(): string | null {
@@ -29,14 +29,14 @@ export async function adminStatus(): Promise<AdminStatus & { userId?: string }> 
     return { state: "signed_out" };
   }
   const { data: assignment, error } = await supabaseAdmin.from("admin_roles")
-    .select("role, view_leads, delete_leads, view_pricing, manage_coupons")
+    .select("role, view_leads, delete_leads, view_pricing")
     .eq("user_id", user.id).maybeSingle();
   if (error) throw new Error("Could not check admin access.");
   if (!assignment) return { state: "forbidden", userId: user.id };
   const role = assignment.role as AdminRole;
   const permissions = effectivePermissions(role, {
     view_leads: assignment.view_leads, delete_leads: assignment.delete_leads,
-    view_pricing: assignment.view_pricing, manage_coupons: assignment.manage_coupons,
+    view_pricing: assignment.view_pricing,
   });
   const claims = claimsData!.claims as { aal?: string; amr?: Array<{ method?: string } | string> };
   if (!hasVerifiedTotp(claims)) {

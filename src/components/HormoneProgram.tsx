@@ -102,7 +102,7 @@ export function HormoneProgram({ track }: { track: ProgramTrack }) {
             })}
           </div>
           <p className="lx-muted" style={{ textAlign: "center", fontSize: ".85rem", marginTop: 18 }}>
-            Includes doctor consultation, medication and free shipping. Renews monthly - cancel anytime.
+            Includes doctor consultation, medication and free shipping.
           </p>
           <div className="legal" style={{ marginTop: 28, maxWidth: "none" }}>
             <div className="callout">

@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   updateError: false,
   inserts: 0,
   updates: 0,
+  patch: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@/lib/fuse-brand.server", () => ({ verifyFuseSignature: async () => true }));
@@ -24,10 +25,11 @@ vi.mock("@/integrations/supabase/client.server", () => ({
         };
       }
       return {
-        update: () => ({
+        update: (patch: Record<string, unknown>) => ({
           eq: () => ({
             select: async () => {
               state.updates++;
+              state.patch = patch;
               return {
                 data: state.matched ? [{ id: "order-1" }] : [],
                 error: state.updateError ? { message: "database unavailable" } : null,
@@ -54,7 +56,7 @@ function request() {
 
 describe("FuseHealth webhook delivery", () => {
   beforeEach(() => {
-    Object.assign(state, { previous: false, matched: false, updateError: false, inserts: 0, updates: 0 });
+    Object.assign(state, { previous: false, matched: false, updateError: false, inserts: 0, updates: 0, patch: null });
     process.env["FUSE_WEBHOOK_SECRET"] = "test-secret";
   });
 
@@ -70,6 +72,12 @@ describe("FuseHealth webhook delivery", () => {
     expect(response.status).toBe(200);
     expect(state.updates).toBe(1);
     expect(state.inserts).toBe(1);
+  });
+
+  it("writes the event to the provider-neutral column only", async () => {
+    state.matched = true;
+    await handler({ request: request() } as never);
+    expect(state.patch).toEqual({ provider_last_event: "FuseHealth payment.succeeded", status: "paid" });
   });
 
   it("does not update an order again for a recorded event", async () => {

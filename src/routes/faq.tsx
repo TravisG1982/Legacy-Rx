@@ -86,7 +86,7 @@ const ORDERING: [string, string][] = [
   ],
   [
     "How do I change my credit card?",
-    "You can change your method of payment at any time. Login to your Legacy Rx account and follow the prompts.",
+    "Card details are entered on the secure payment step and are not stored in your LegacyRX account. For help with a payment method, contact support@legacyrx.net without including card numbers.",
   ],
   [
     "What if I have a problem with my order or my account?",
@@ -98,14 +98,14 @@ const ORDERING: [string, string][] = [
   ],
   [
     "How can I change my shipping address?",
-    "Login to your Legacy Rx account and update your shipping address at any time. Once your medication is shipped and delivered, you can change your address for all future shipments.",
+    "Contact support@legacyrx.net as soon as possible to ask about a change. An address cannot be changed after your medication has shipped.",
   ],
 ];
 
 const RETURNS: [string, string][] = [
   [
     "What is the return policy?",
-    "Login to your Legacy Rx account and reorder or cancel at any time. You will be contacted before your medication is to be refilled and billed to your credit card. Your medication will then be shipped.",
+    "For questions about a refill, cancellation or a change to your plan, contact support@legacyrx.net. We will tell you how your order is handled before any change is made.",
   ],
   [
     "Can I return my medications once I receive them?",

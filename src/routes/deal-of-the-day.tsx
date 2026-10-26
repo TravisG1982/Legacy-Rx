@@ -58,7 +58,6 @@ export const Route = createFileRoute("/deal-of-the-day")({
   component: DealOfTheDayPage,
 });
 
-const PROMO = "EXCLUSIVE" as const;
 const CTA = "/qualify" as const;
 const CTA_SEARCH = {} as const;
 

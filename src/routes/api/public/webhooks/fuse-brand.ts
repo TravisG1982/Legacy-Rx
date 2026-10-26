@@ -62,7 +62,7 @@ export const Route = createFileRoute("/api/public/webhooks/fuse-brand")({
         const sessionId = s(data["sessionId"]) ?? s(data["session_id"]) ?? s(data["checkoutSessionId"]);
         if (!orderId && !sessionId) return new Response("Missing order identifier", { status: 400 });
         const eventLabel = STATUS[event] ? event : "unknown_event";
-        const patch: Record<string, unknown> = { fuzerx_last_event: `FuseHealth ${eventLabel}` };
+        const patch: Record<string, unknown> = { provider_last_event: `FuseHealth ${eventLabel}` };
         if (STATUS[event]) patch["status"] = STATUS[event];
         if (orderId) patch["fuse_order_id"] = orderId;
         const amount = Number(data["amount"] ?? data["total"]);
