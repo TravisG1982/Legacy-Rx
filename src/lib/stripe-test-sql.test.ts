@@ -16,10 +16,10 @@ async function event(
   id: string,
   type: string,
   target: string,
-  o: { order?: string; session?: string | null; pi?: string; amount?: number; cur?: string } = {},
+  o: { order?: string; session?: string | null; pi?: string; amount?: number | null; cur?: string } = {},
 ) {
   const r = await db.query<{ r: string }>(`select public.apply_payment_test_event($1,$2,$3,$4,$5,$6,$7,$8) r`, [
-    id, type, o.order ?? O(1), o.session === undefined ? "cs_1" : o.session, o.pi ?? "pi_1", target, o.amount ?? 50600, o.cur ?? "usd",
+    id, type, o.order ?? O(1), o.session === undefined ? "cs_1" : o.session, o.pi ?? "pi_1", target, o.amount === undefined ? 50600 : o.amount, o.cur ?? "usd",
   ]);
   return r.rows[0]!.r;
 }
@@ -30,6 +30,8 @@ beforeAll(async () => {
   await db.exec(`create role service_role; create role anon; create role authenticated;
     create function public.set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end $$;`);
   await db.exec(readFileSync("supabase/migrations/20261026130000_create_stripe_test_payments.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261026140000_fix_stripe_test_failed_intent.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261026150000_harden_stripe_test_failed_amount.sql", "utf8"));
 });
 
 describe("apply_payment_test_event (real SQL, synthetic data)", () => {
@@ -50,6 +52,32 @@ describe("apply_payment_test_event (real SQL, synthetic data)", () => {
     expect(await status(O(2))).toBe("payment_failed");
     expect(await event("evt_6", "checkout.session.completed", "paid", { order: O(2), session: "cs_2" })).toBe("applied");
     expect(await status(O(2))).toBe("paid");
+  });
+
+  it("records a declined card while Checkout is open, before any completed-session event", async () => {
+    const id = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+    await order(id);
+    await db.query("update payment_test_orders set stripe_session_id=$1 where id=$2", ["cs_declined", id]);
+    expect(await event("evt_declined", "payment_intent.payment_failed", "payment_failed", { order: id, session: null, pi: "pi_declined" })).toBe("applied");
+    expect(await status(id)).toBe("payment_failed");
+    expect(await event("evt_declined", "payment_intent.payment_failed", "payment_failed", { order: id, session: null, pi: "pi_declined" })).toBe("duplicate");
+    expect(await event("evt_declined_again", "payment_intent.payment_failed", "payment_failed", { order: id, session: null, pi: "pi_other" })).toBe("ignored");
+    expect(await event("evt_declined_then_paid", "checkout.session.completed", "paid", { order: id, session: "cs_declined", pi: "pi_paid" })).toBe("applied");
+    expect(await status(id)).toBe("paid");
+  });
+
+  it("does not accept an unbound failure without our session or with wrong amount/currency", async () => {
+    const id = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+    await order(id);
+    const failure = (eventId: string, amount: number | null = 50600, cur = "usd") =>
+      event(eventId, "payment_intent.payment_failed", "payment_failed", { order: id, session: null, pi: "pi_unbound", amount, cur });
+    await expect(failure("evt_no_session")).rejects.toThrow();
+    await db.query("update payment_test_orders set stripe_session_id=$1 where id=$2", ["cs_check", id]);
+    await expect(failure("evt_wrong_amount", 1)).rejects.toThrow();
+    await expect(failure("evt_null_amount", null)).rejects.toThrow();
+    await expect(failure("evt_wrong_currency", 50600, "eur")).rejects.toThrow();
+    expect(await status(id)).toBe("pending_payment");
+    expect(await failure("evt_no_session")).toBe("applied");
   });
 
   it("never marks a wrong amount or currency as paid", async () => {

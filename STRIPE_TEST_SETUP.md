@@ -1,6 +1,6 @@
 # LegacyRX Stripe test payments: setup
 
-Test-mode only. This path is separate from FuseHealth (`/start/$med`, `/api/public/webhooks/fuse-brand`) and from Beluga. It never reads or writes `orders`. The moment of authorization and capture is **not decided**: confirm it with Beluga before production (see "Provisional choices").
+Test-mode only. This path is separate from FuseHealth (`/start/$med`, `/api/public/webhooks/fuse-brand`) and from Beluga. It never reads or writes `orders`. The moment of authorization and capture is **not decided**: confirm it with Beluga before live payments (see "Provisional choices").
 
 ## What exists
 
@@ -9,14 +9,14 @@ Test-mode only. This path is separate from FuseHealth (`/start/$med`, `/api/publ
 | Start page (button only; the server fixes the amount) | `/pay-test/<med>` (e.g. `/pay-test/sema`) after finishing `/qualify` |
 | Result page (needs the private link Stripe redirects to) | `/pay-test/result` |
 | Webhook endpoint | `POST /api/public/webhooks/stripe-test` |
-| Tables / function | `payment_test_orders`, `payment_test_webhook_events`, `apply_payment_test_event()` in `20261026130000_create_stripe_test_payments.sql` |
+| Tables / function | `payment_test_orders`, `payment_test_webhook_events`, `apply_payment_test_event()` in `20261026130000_create_stripe_test_payments.sql`, updated by `20261026140000_fix_stripe_test_failed_intent.sql` and `20261026150000_harden_stripe_test_failed_amount.sql` |
 
 Guards: it works only when `STRIPE_TEST_PAYMENTS_ENABLED=true` **and** the key starts with `sk_test_`; creating a payment also requires a signed-in, verified account whose email equals `STRIPE_TEST_ALLOWED_EMAIL`. Live-mode events and sessions are rejected. Prices come from `legacyrx-data.ts` on the server; Stripe receives only an opaque order id and the label `LegacyRX order <number>` (no email, product, plan or health data in our Stripe request). Stripe's hosted form may collect the payer's own email.
 
 ## Steps
 
 ### 1. Database
-Both required migrations were applied to the Legacy Rx Supabase project on October 26, in order: `20261026120000_add_orders_provider_last_event.sql` and `20261026130000_create_stripe_test_payments.sql`. The coupon-function cleanup stays in `supabase/deferred/` and must not be applied yet. The Stripe migration adds only test tables and one function.
+All four October 26 migrations were applied to the Legacy Rx Supabase project in order: `20261026120000_add_orders_provider_last_event.sql`, `20261026130000_create_stripe_test_payments.sql`, `20261026140000_fix_stripe_test_failed_intent.sql`, and `20261026150000_harden_stripe_test_failed_amount.sql`. The last two migrations fix a declined card event received while Stripe Checkout is still open and reject a missing amount. The coupon-function cleanup stays in `supabase/deferred/` and must not be applied yet.
 
 ### 2. Stripe Dashboard (LegacyRX account, **Test mode**)
 1. Switch the top-right toggle to **Test mode** (orange "Test mode" banner must be visible).
@@ -25,10 +25,11 @@ Both required migrations were applied to the Legacy Rx Supabase project on Octob
    - Endpoint URL: `https://<your-preview-host>/api/public/webhooks/stripe-test`
    - Events: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.amount_capturable_updated`
    - Save, then open the endpoint and click **Reveal** under **Signing secret** (`whsec_...`).
-4. Use the **Preview** deployment URL only. Do not register the production domain until the flow is approved.
+4. Start QA with the **Preview** deployment URL. After the branch is merged and Preview QA passes, create a second test-mode webhook destination for `https://legacy-rx.vercel.app/api/public/webhooks/stripe-test` if QA must continue on the main deployment. Each destination has its own `whsec_...` secret; never use the Preview secret for the main deployment.
+5. If Vercel Authentication protects Preview, create a dedicated **Protection Bypass for Automation** secret in Vercel and append `?x-vercel-protection-bypass=<secret>` to the Preview webhook destination URL in Stripe. Keep this bypass value private; it is separate from Stripe's `whsec_...`. Without it, Stripe cannot reach the protected deployment. Do not disable protection for the whole Preview just for the webhook.
 
 ### 3. Vercel (Project > Settings > Environment Variables)
-Add to the **Preview** environment only (not Production), Sensitive = on:
+For initial QA, add these to the **Preview** environment (sensitive values as Secret):
 
 | Variable | Value |
 | --- | --- |
@@ -36,10 +37,13 @@ Add to the **Preview** environment only (not Production), Sensitive = on:
 | `STRIPE_TEST_SECRET_KEY` | `sk_test_...` from step 2.2 |
 | `STRIPE_TEST_WEBHOOK_SECRET` | `whsec_...` from step 2.3 |
 | `STRIPE_TEST_ALLOWED_EMAIL` | Exact email of the verified QA account, e.g. `thisissoftwaredevv@gmail.com` |
-| `STRIPE_TEST_RETURN_ORIGIN` | Exact preview origin, e.g. `https://your-preview.vercel.app`; use `http://localhost:3000` only for local QA |
+| `STRIPE_TEST_RETURN_ORIGIN` | Exact origin of the deployment being tested, e.g. `https://your-preview.vercel.app`; use `http://localhost:3000` only for local QA |
 | `STRIPE_TEST_CAPTURE_METHOD` | optional: `manual` to test authorize-only; omit for immediate capture |
 
-Existing variables used: `SESSION_SECRET` and Supabase keys. `STRIPE_TEST_RETURN_ORIGIN` is required so the private result link cannot accidentally be sent to the production origin or to a request-supplied host. Redeploy the Preview after changing variables.
+Existing variables used: `SESSION_SECRET` and Supabase keys. `STRIPE_TEST_RETURN_ORIGIN` must match the intended deployment so the private result link is not sent to a request-supplied host. Redeploy the Preview after changing variables.
+
+### After merge: QA on the main Vercel deployment
+The main deployment may continue to run this **test-only** path while Beluga is pending. In Stripe's test/sandbox mode, add the separate `https://legacy-rx.vercel.app/api/public/webhooks/stripe-test` destination with the seven events above. In Vercel **Production**, add the variables from the table, with `STRIPE_TEST_RETURN_ORIGIN=https://legacy-rx.vercel.app` and `STRIPE_TEST_WEBHOOK_SECRET` set to the **main destination's** signing secret. Keep `STRIPE_TEST_SECRET_KEY` an `sk_test_` key and `STRIPE_TEST_ALLOWED_EMAIL` restricted to the verified QA account. Redeploy Production after saving the variables. This does not enable live charges or replace the existing FuseHealth checkout. Use synthetic QA data only.
 
 ### 4. Try it
 1. Sign in with the verified QA account matching `STRIPE_TEST_ALLOWED_EMAIL`. Complete `/qualify` for a product using that same email and synthetic answers, then open `/pay-test/<med>` and press **Continue to test payment**. A different or signed-out account is rejected by the server.
@@ -50,7 +54,7 @@ Existing variables used: `SESSION_SECRET` and Supabase keys. `STRIPE_TEST_RETURN
 
 ## Behavior to know
 - A second click while a payment is open returns to the same Stripe session (one open order per email + product + plan).
-- Webhooks are verified on the raw body (5-minute tolerance) and each event id is stored once; replays are acknowledged and ignored. An event for an unknown order, or a PaymentIntent event that arrives before its Checkout session binds the PaymentIntent ID, returns `503` so Stripe retries. A different session or PaymentIntent ID is ignored.
+- Webhooks are verified on the raw body (5-minute tolerance) and each event id is stored once; replays are acknowledged and ignored. An event for an unknown order returns `503` so Stripe retries. Success/authorization PaymentIntent events arriving before a signed Checkout event binds their PaymentIntent ID also retry. A signed `payment_intent.payment_failed` event may be recorded while Checkout is still open if the order already has our stored session and its amount/currency match; otherwise it retries. A different session or PaymentIntent ID cannot mark the order paid.
 - Statuses only move forward: `pending_payment` < `abandoned`/`payment_failed` < `authorized` < `paid`. A late failure or expiry cannot undo a payment. A paid event whose amount or currency differs from the order marks it `order_error` and is never treated as paid.
 - The order's private link (token in the redirect URL) is the only way to read a test order; the database stores only its hash.
 
