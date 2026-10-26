@@ -1,6 +1,5 @@
-// src/lib/account.functions.ts — signed-in customer's orders, plan and billing portal.
+// src/lib/account.functions.ts — signed-in customer's orders and order status.
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -17,36 +16,20 @@ export const getMyAccount = createServerFn({ method: "GET" })
     // Orders are matched by the verified account email (checkout doesn't require sign-in).
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const orderColumns =
-      "order_number, product_name, total, status, fuzerx_status, created_at, is_renewal, email";
-    const [linkedOrders, subs] = await Promise.all([
-      supabaseAdmin
-        .from("orders")
-        .select(orderColumns)
-        .eq("user_id", userId)
-        .ilike("email", emailPattern(email))
-        .neq("status", "pending_payment")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabaseAdmin
-        .from("subscriptions")
-        .select(
-          "stripe_subscription_id, medication, status, current_period_end, cancel_at_period_end, price_id, created_at, environment, email",
-        )
-        .eq("user_id", userId)
-        .ilike("email", emailPattern(email))
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+      "order_number, product_name, total, status, created_at, is_renewal, email";
+    const linkedOrders = await supabaseAdmin
+      .from("orders")
+      .select(orderColumns)
+      .eq("user_id", userId)
+      .ilike("email", emailPattern(email))
+      .neq("status", "pending_payment")
+      .order("created_at", { ascending: false })
+      .limit(50);
     if (linkedOrders.error) throw new Error("Could not load your orders.");
-    if (subs.error) throw new Error("Could not load your plan.");
     const orders = (linkedOrders.data ?? []).filter((order) =>
       sameVerifiedEmail(order.email, email),
     );
-    return {
-      email,
-      orders,
-      subscriptions: (subs.data ?? []).filter((sub) => sameVerifiedEmail(sub.email, email)),
-    };
+    return { email, orders };
   });
 
 /** Each status request independently verifies the account email and order ownership. */
@@ -58,40 +41,4 @@ export const getMyOrderStatus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { loadVerifiedOrderStatus } = await import("./account-order-status.server");
     return loadVerifiedOrderStatus(context.userId, data.orderNumber);
-  });
-
-export const createPortalSession = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ subscriptionId: z.string().min(1) }).parse(d),
-  )
-  .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
-    const { verifiedAccountEmail, sameVerifiedEmail } = await import("./account-access.server");
-    const userId = context.userId;
-    const email = await verifiedAccountEmail(userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: sub, error } = await supabaseAdmin
-      .from("subscriptions")
-      .select("stripe_customer_id, environment, email")
-      .eq("stripe_subscription_id", data.subscriptionId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error || !sub || !sameVerifiedEmail(sub.email, email) || !sub.stripe_customer_id) {
-      return { error: "No active plan found for this account." };
-    }
-    if (sub.environment !== "sandbox" && sub.environment !== "live") {
-      return { error: "Billing is not available for this plan." };
-    }
-    const request = getRequest();
-    if (!request) return { error: "Billing is unavailable right now." };
-    const { createStripeClient } = await import("./stripe.server");
-    try {
-      const portal = await createStripeClient(sub.environment).billingPortal.sessions.create({
-        customer: sub.stripe_customer_id,
-        return_url: new URL("/account", request.url).toString(),
-      });
-      return { url: portal.url };
-    } catch {
-      return { error: "Could not open billing right now." };
-    }
   });

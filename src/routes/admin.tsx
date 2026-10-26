@@ -7,7 +7,6 @@ import { getAdminStatus } from "../lib/admin-access.functions";
 import { AdminGate } from "../components/AdminGate";
 import { supabase } from "@/integrations/supabase/client";
 import type { AdminPricingRow } from "../lib/pricing-types";
-import { CouponAdmin } from "../components/CouponAdmin";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -37,13 +36,9 @@ function AdminPage() {
   const { status, pricing } = Route.useLoaderData();
   if (status.state !== "ready") return <AdminGate status={status} />;
   if (!status.permissions?.view_pricing || !pricing) {
-    if (status.permissions?.manage_coupons) return <div style={{ maxWidth: 1080, margin: "40px auto", padding: 18 }}>
-      <button className="btn btn-ghost" onClick={async () => { await supabase.auth.signOut(); await window.location.reload(); }}>Sign out</button>
-      <CouponAdmin />
-    </div>;
-    return <div className="lx-card" style={{ maxWidth: 440, margin: "60px auto" }}>No pricing or coupon permissions are assigned to this account.</div>;
+    return <div className="lx-card" style={{ maxWidth: 440, margin: "60px auto" }}>Pricing access is not assigned to this account.</div>;
   }
-  return <PricingDashboard rows={pricing.rows} loadError={pricing.error} canManageCoupons={status.permissions.manage_coupons} />;
+  return <PricingDashboard rows={pricing.rows} loadError={pricing.error} />;
 }
 
 type RowState = { value: string; busy: boolean; message: string | null; error: string | null };
@@ -51,11 +46,9 @@ type RowState = { value: string; busy: boolean; message: string | null; error: s
 function PricingDashboard({
   rows,
   loadError,
-  canManageCoupons,
 }: {
   rows: AdminPricingRow[];
   loadError: string | null;
-  canManageCoupons: boolean;
 }) {
   const router = useRouter();
   const [state, setState] = useState<Record<string, RowState>>({});
@@ -182,7 +175,6 @@ function PricingDashboard({
           </tbody>
         </table>
       </div>
-      {canManageCoupons && <CouponAdmin />}
     </div>
   );
 }

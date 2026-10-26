@@ -16,18 +16,15 @@ import { LiveViewers, SpotsLeft, StickyUrgency } from "@/components/PlanUrgency"
 import { ReviewingResponses } from "@/components/ReviewingResponses";
 import { EMAIL_RE, commitStep1, focusFirstStep1Error, validateStep1Fields, type Step1Errors } from "../lib/qualify-step1";
 import { getAssessmentProgress, invalidateAssessment, submitAssessmentStep1, submitAssessmentStep2 } from "../lib/assessment.functions";
-import { resolveCampaignCoupon, totalWithCoupon, type CouponResult } from "../lib/coupon";
 
 
 export const Route = createFileRoute("/qualify")({
-  validateSearch: (search: Record<string, unknown>): { step?: FunnelStep; promo?: string; track?: ProgramTrack; med?: MedKey } => {
+  validateSearch: (search: Record<string, unknown>): { step?: FunnelStep; track?: ProgramTrack; med?: MedKey } => {
     const requestedStep = Number(search.step);
-    const promoRaw = typeof search.promo === "string" ? search.promo.trim() : "";
-    const out: { step?: FunnelStep; promo?: string; track?: ProgramTrack; med?: MedKey } = {};
+    const out: { step?: FunnelStep; track?: ProgramTrack; med?: MedKey } = {};
     if ((PROGRAM_TRACKS as readonly unknown[]).includes(search.track)) out.track = search.track as ProgramTrack;
     if (isMedKey(search.med)) out.med = search.med;
     if (requestedStep === 2 || requestedStep === 3) out.step = requestedStep as FunnelStep;
-    if (promoRaw) out.promo = promoRaw;
     return out;
   },
   head: () => ({
@@ -111,8 +108,6 @@ function QualifyPage() {
   const { price: livePrice } = useLivePrices();
   const [med, setMed] = useState<MedKey>("sema");
   const [plan, setPlan] = useState<Plan["id"]>("3");
-  // Campaign discount carried in from a link that includes a promo code.
-  const [campaignCoupon, setCampaignCoupon] = useState<CouponResult | null>(null);
   const hydratedRef = useRef(false);
 
   useEffect(() => {
@@ -137,23 +132,6 @@ function QualifyPage() {
 
 
   const pct = step * 25;
-
-  // Display-only: promo-lander visitors see the discounted price up front.
-  const discountPct =
-    campaignCoupon?.valid && campaignCoupon.type === "percent" ? Number(campaignCoupon.value ?? 0) : 0;
-  const promoActive = discountPct > 0;
-  const shown = (m: MedKey, planId: Plan["id"]) => {
-    const base = livePrice(m, planId);
-    if (!promoActive) return { ...base, wasTotal: 0, wasMonthly: 0 };
-    const total = totalWithCoupon(base.total, campaignCoupon);
-    const months = base.total > 0 ? base.total / base.monthly : 1;
-    return {
-      total,
-      monthly: months > 0 ? total / months : total,
-      wasTotal: base.total,
-      wasMonthly: base.monthly,
-    };
-  };
 
   // Keep browser/device Back inside the funnel: on the first stage a Back
   // action must not leave for the home page or the referring page.
@@ -212,12 +190,6 @@ function QualifyPage() {
     const startMed = MED_INFO[wanted]?.track === track ? wanted : trackMeds[0]!;
     setMed(startMed);
     setPlan(MEDS[startMed].plans.some((p) => p.id === saved.plan) && startMed === saved.med ? saved.plan : defaultPlan(startMed));
-    // Only a code in the current link discounts anything - nothing is applied
-    // by default. A link code carries through to checkout; a leftover one does not.
-    const urlPromo = search.promo?.trim();
-    const fromUrl = urlPromo ? resolveCampaignCoupon(urlPromo) : null;
-    writeFunnel({ coupon: fromUrl?.code ? fromUrl.code.toUpperCase() : undefined });
-    setCampaignCoupon(fromUrl);
   }, []);
 
   // Record the lead as soon as someone starts typing, even if they never
@@ -600,9 +572,9 @@ function QualifyPage() {
               <button key={k} type="button" className={`opt ${med === k ? "selected" : ""}`} onClick={() => { setMed(k); setPlan(defaultPlan(k)); }}>
                 {MEDS[k].name}
                 <span className="medfrom">
-                  {k === "sema" ? `from ${money(shown("sema", "3").monthly)}/mo`
-                    : k === "tirz" ? `from ${money(shown("tirz", "3").monthly)}/mo · newest`
-                    : `from ${money(shown(k, "3").monthly)}/mo`}
+                  {k === "sema" ? `from ${money(livePrice("sema", "3").monthly)}/mo`
+                    : k === "tirz" ? `from ${money(livePrice("tirz", "3").monthly)}/mo · newest`
+                    : `from ${money(livePrice(k, "3").monthly)}/mo`}
                 </span>
                 <span className="optcheck" aria-hidden="true">✓</span>
               </button>
@@ -613,11 +585,6 @@ function QualifyPage() {
           <p style={{ fontWeight: 600, marginBottom: 4 }}>Select Your Plan</p>
           <SpotsLeft />
 
-          {promoActive && (
-            <p className="promo-applied-note">
-              {(campaignCoupon?.code ?? "").toUpperCase()} applied - {discountPct}% off every plan below
-            </p>
-          )}
           {MEDS[med].plans.map((p) => (
             <div
               key={p.id}
@@ -629,14 +596,14 @@ function QualifyPage() {
                 <div style={{ fontWeight: 700 }}>{p.label}</div>
                 <div className="lx-muted" style={{ fontSize: ".85rem" }}>
                   {p.then
-                    ? `Then ${money(promoActive ? p.then * (1 - discountPct / 100) : p.then)}/mo`
-                    : `${money(shown(med, p.id).total)} total`}
+                    ? `Then ${money(p.then)}/mo`
+                    : `${money(livePrice(med, p.id).total)} total`}
                 </div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
 
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 3, whiteSpace: "nowrap" }}>
-                  <span className="pmo">{money(shown(med, p.id).monthly)}</span>
+                  <span className="pmo">{money(livePrice(med, p.id).monthly)}</span>
                   <span className="lx-muted" style={{ fontSize: ".78rem" }}>{p.then ? "first month" : "/month"}</span>
                 </div>
                 {p.save > 0 && <span className="save-pill">SAVE ${p.save.toLocaleString("en-US")}</span>}
@@ -672,7 +639,7 @@ function QualifyPage() {
           <div style={{ textAlign: "center", marginTop: 12, fontSize: ".8rem", color: "var(--muted)" }}>
             🛡 HIPAA Compliant · ✓ Licensed Pharmacies · 🚚 Free Shipping
           </div>
-          <p className="ssl">🔒 Secure checkout • Cancel anytime • No hidden fees</p>
+          <p className="ssl">🔒 Secure checkout • No hidden fees</p>
           <div className="funnel-sticky-bar funnel-sticky-bar--stack">
             <StickyUrgency />
             <button type="button" className="btn btn-primary" style={{ width: "100%" }} onClick={toCheckout}>Continue →</button>

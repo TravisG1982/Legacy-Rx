@@ -34,40 +34,27 @@ export type FunnelState = {
   contact?: FunnelContact;
   answers?: FunnelAnswers;
   latestStep?: FunnelStep;
-  /** Promo code handed out by a campaign lander; pre-filled at checkout. */
-  coupon?: string;
 };
 
-/**
- * Legacy key: campaign promos used to persist in localStorage, which meant a
- * single offer-page visit discounted every later visit. Promos are now
- * session-scoped only; this key is purged on load.
- */
+/** Promo codes no longer exist. Drops the old cross-visit key and any promo saved with this visit's funnel state. */
 const LEGACY_PROMO_KEY = "legacyrx-promo";
 
-/** Removes the old cross-visit promo storage so no discount applies by default. */
 export function purgeLegacyPromo() {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(LEGACY_PROMO_KEY);
   } catch {}
-}
-
-
-/** Drops any campaign promo from this visit (used by landers that sell at full price). */
-export function clearPromo() {
-  if (typeof window === "undefined") return;
-  purgeLegacyPromo();
   try {
     const raw = sessionStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as FunnelState;
-      delete parsed.coupon;
-      sessionStorage.setItem(KEY, JSON.stringify(parsed));
+      const parsed = JSON.parse(raw) as FunnelState & { coupon?: unknown };
+      if ("coupon" in parsed) {
+        delete parsed.coupon;
+        sessionStorage.setItem(KEY, JSON.stringify(parsed));
+      }
     }
   } catch {}
 }
-
 
 export function readFunnel(): FunnelState {
   if (typeof window === "undefined") return { med: "sema", plan: "3" };

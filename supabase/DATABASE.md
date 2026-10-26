@@ -1,12 +1,12 @@
 # Legacy Rx Database
 
-Status as of October 23, 2026. Target Supabase project: **Legacy Rx**, project ID `qczeuhomxlmrorsdceri`. The application schema is `public`; authentication is managed by Supabase Auth. Both admin migrations have been applied in the hosted project.
+Status as of October 26, 2026. Target Supabase project: **Legacy Rx**, project ID `qczeuhomxlmrorsdceri`. The application schema is `public`; authentication is managed by Supabase Auth. All four October 26 migrations are applied in the hosted project. The coupon cleanup script remains deferred.
 
 ## Current state
 
-- Thirteen SQL migrations from [`migrations/`](./migrations/) have been applied. Both new admin versions were verified in the hosted migration history; their tables and functions exist. The coupon functions are executable by `service_role`, not `anon` or `authenticated`.
-- The `public` schema contains ten tables: eight application tables plus `admin_roles` and `admin_audit_log`. Auth users, orders, and subscriptions were empty before the two October 21 migrations; no records were imported.
-- Row Level Security (RLS) is enabled on all ten tables. The verified-email claim function is executable only by `service_role`, and client roles have no table privileges on `account_email_claims`.
+- Seventeen SQL migrations from [`migrations/`](./migrations/) have been applied. The October 26 versions were verified in the hosted migration history; their column, tables, function, RLS, and grants exist. The coupon functions are executable by `service_role`, not `anon` or `authenticated`.
+- The `public` schema contains twelve tables: the prior ten plus `payment_test_orders` and `payment_test_webhook_events`. Auth users, orders, and subscriptions were empty before the two October 21 migrations; no records were imported.
+- Row Level Security (RLS) is enabled on all twelve tables. The verified-email claim function is executable only by `service_role`, and client roles have no table privileges on `account_email_claims` or the two test-payment tables.
 - There are no foreign keys between these tables. The `user_id` columns in `orders` and `subscriptions` have no foreign key to `auth.users`. The application also associates orders and subscriptions with accounts by verified email.
 - The admin application connected to this project on October 23 using synthetic/test data. Role assignment, TOTP gating, permission changes, access revocation, and read/export audit records were verified. Auth configuration, secrets, backups, broader security controls, and vendor agreements still need production review. This document does not establish readiness to store real patient data.
 
@@ -25,7 +25,7 @@ Status as of October 23, 2026. Target Supabase project: **Legacy Rx**, project I
 | `admin_roles` | Exact Supabase Auth user ID to `owner` or `staff` assignment. | Staff permissions `view_leads`, `delete_leads`, `view_pricing`, `manage_coupons` default to false. Owner has all four permissions in application policy. |
 | `admin_audit_log` | Minimal record of authenticated admin reads, denied requests, validation errors, and mutations. | Actor ID, action, object type/identifier, timestamp, outcome (`success`, `denied`, `failure`, `validation_error`). No request body or patient details. Successful bulk deletion records one row per deleted lead UUID. Anonymous requests do not write audit rows. |
 
-The `orders` table contains both current FuseHealth fields and Stripe/FuzeRx fields used by code paths in the repository. `stripe_invoice_id` and `fuse_order_id` have partial unique indexes, so uniqueness is enforced only for non-null values.
+The `orders` table contains the current FuseHealth identifiers (`fuse_order_id`, `fuse_session_id`) and legacy Stripe/FuzeRx columns. `provider_last_event` is in place for the new application code. As of October 26 the new application code no longer reads or writes the legacy `fuzerx_*`, `stripe_*`, `coupon_code`, `discount`, `card_last4` or `payment_mode` columns; they are retained for historical rows only. `stripe_invoice_id` and `fuse_order_id` have partial unique indexes, so uniqueness is enforced only for non-null values.
 
 ## Access and RLS
 
@@ -75,13 +75,18 @@ Schema migrations live in [`supabase/migrations/`](./migrations/) and run in tim
 | `20261021120100_revoke_account_email_claims_client_grants.sql` | Restricts the account-email reservation table to the server role. |
 | `20261021120200_contact_delivery_and_email_marketing.sql` | Separates email marketing consent and records contact-form delivery attempts. |
 | `20261023120000_admin_roles_and_audit.sql` | Adds per-user roles, staff permissions, protected admin audit log, and service-only transactional lead deletion. Applied. |
-| `20261023130000_admin_coupon_audit_transactions.sql` | Adds transactional service-only coupon create/update/delete functions with audit entries. Applied. |
+| `20261023130000_admin_coupon_audit_transactions.sql` | Adds transactional service-only coupon create/update/delete functions with audit entries. Applied. The functions are dropped by `20261026120100`. |
+| `20261026120000_add_orders_provider_last_event.sql` | **Applied October 26.** Adds `orders.provider_last_event` and copies `fuzerx_last_event` into it. |
+| `20261026130000_create_stripe_test_payments.sql` | **Applied October 26.** Adds `payment_test_orders`, `payment_test_webhook_events` and the service-only `apply_payment_test_event()` for the test-mode Stripe path. |
+| `20261026140000_fix_stripe_test_failed_intent.sql` | **Applied October 26.** Lets a signed failed-payment event update an open test Checkout before a completed-session event exists, while retaining amount/currency and session checks. |
+| `20261026150000_harden_stripe_test_failed_amount.sql` | **Applied October 26.** Rejects a failed-payment event that lacks an amount when binding its first PaymentIntent. |
+| `../deferred/20261026120100_drop_coupon_functions.sql` | **Deferred, not applied.** Drops `save_admin_coupon`, `delete_admin_coupon` and `redeem_coupon` only after the new deployment is verified. It is outside `migrations/` so `db push` cannot apply it early. |
 
 The application calls `delete_admin_funnel_leads` with the actor ID from its verified server-side Supabase Auth check. The function checks the current database role again, deletes the requested leads, and inserts one audit row per deleted UUID in the **same transaction**. A failed audit insert rolls back the deletion. `anon` and `authenticated` cannot execute the function. A zero-row deletion records the attempted action without a patient identifier.
 
 Exporting lead CSV calls a separate server function that rechecks current access and records `export_leads` before offering the downloaded data. On October 23, an export of an empty test dashboard produced one successful audit row.
 
-Coupon creation, updates, and deletion likewise use service-only `save_admin_coupon` and `delete_admin_coupon` functions. They recheck the actor's current role and commit the coupon change with its audit row in one transaction. A failed audit insert rolls back the coupon change.
+Until `20261026120100` is applied, the service-only `save_admin_coupon` and `delete_admin_coupon` functions still exist, but the application no longer calls them (the coupon admin screen was removed on October 26). Historically they rechecked the actor's current role and committed the coupon change with its audit row in one transaction. A failed audit insert rolled back the coupon change.
 
 On October 23, both admin migrations, both coupon functions, and their SQL grants were verified in the hosted project. A coupon create/delete was exercised inside a transaction and rolled back; the test coupon and its audit rows were absent afterward. No client-facing coupon write was performed against the hosted project.
 
@@ -98,10 +103,30 @@ For later staff accounts, use the same identity verification and exact-ID proced
 
 On October 23, `thisissoftwaredevv@gmail.com` was temporarily assigned `owner` for live testing. TOTP enrollment and verification opened `/travis` and `/admin`; changing that same account to restricted `staff` immediately changed the pages it could view; deleting its role immediately returned `/admin` to “Access unavailable.” The temporary role was removed and the local session signed out. The verified TOTP factor remains on that Auth account. No customer owner/staff role has been provisioned by this test.
 
+## Deployment sequence and deferred cleanup (October 26)
+
+The FuseHealth webhook and checkout used to record events in `orders.fuzerx_last_event`. They now write `orders.provider_last_event`. Safe order:
+
+1. `20261026120000_add_orders_provider_last_event.sql` is applied (additive; the old deployment keeps working).
+2. Deploy the new code.
+3. Re-run the `UPDATE` in that file once to copy any events the old deployment wrote to `fuzerx_last_event` during the rollout (it is idempotent).
+4. After smoke testing and the rollback window, move `supabase/deferred/20261026120100_drop_coupon_functions.sql` into `supabase/migrations/`, review `db push --dry-run`, then apply it.
+5. Optionally regenerate `src/integrations/supabase/types.ts`; it currently includes `provider_last_event` by hand and still lists the coupon functions until step 4.
+
+Rollback: the old code works against both additive migrations; do not apply step 4 before the old deployment is gone. Both additive versions are already recorded in the hosted migration history.
+
+## Test-mode Stripe tables (applied October 26)
+
+`payment_test_orders` holds test orders only (email, medication, plan, server-fixed `amount_cents`, status, Stripe session/intent ids, hash of the buyer's access token); it holds no intake answers and is separate from `orders`. A partial unique index allows one open attempt (`pending_payment` or `payment_failed`) per email, product and plan. `payment_test_webhook_events` stores processed Stripe event ids. Both tables have RLS enabled with no client policies and no `anon`/`authenticated` privileges; `service_role` has `SELECT/INSERT/UPDATE` (events: `SELECT/INSERT`). `apply_payment_test_event(...)` is `SECURITY DEFINER`, executable only by `service_role`: it records the event id and advances the order in one transaction (status rank `pending_payment` < `abandoned`/`payment_failed` < `authorized` < `paid` < `order_error`), marks an amount or currency mismatch as `order_error`, and rolls back (not consuming the event id) when the order is unknown. A signed declined-card event can update an open Checkout before completion only if a server-stored session exists and its amount/currency match. The migration SQL is exercised by `src/lib/stripe-test-sql.test.ts` on PGlite with synthetic rows. See `STRIPE_TEST_SETUP.md` at the repository root.
+
+## Deferred cleanup (not done)
+
+Nothing below is dropped, because historical-data needs and backups have not been confirmed: `orders.fuzerx_*`, `orders.stripe_*`, `orders.coupon_code`, `orders.discount`, `orders.card_last4`, `orders.payment_mode`, `orders.is_renewal`, `orders.environment`, `order_failures`, `subscriptions`, `coupons`, `admin_roles.manage_coupons` (the application ignores it; owner policy no longer grants it). Drop them in a later migration once the Lovable backup is verified and the new Stripe/Beluga schema is designed.
+
 The workflow for future migrations is described in [`supabase/README.md`](./README.md).
 
 On October 21, 2026, `20261021120000_claim_verified_guest_records.sql` and `20261021120100_revoke_account_email_claims_client_grants.sql` were applied to the hosted Legacy Rx project. The first adds an atomic, verified-email claim for guest orders and subscriptions, reserves each normalized email for one account, and makes FuseHealth and Stripe session identifiers unique. The second explicitly revokes Supabase's default client-role table grants. Their migration-history entries, schema objects, RLS, and grants were checked in the hosted project.
 
 On October 21, 2026, `20261021120200_contact_delivery_and_email_marketing.sql` was applied to the same project. The migration history contains one entry for version `20261021120200`; `email_marketing_consent` and all three contact delivery columns were verified in `information_schema`. Existing contact rows default to `unconfirmed` because their delivery outcomes cannot be inferred. New rows explicitly start as `pending`.
 
-On October 23, 2026, the client confirmed that WhiteLabelMD is retired. The developer temporarily left the contact page visible with disabled fields; the server function returns `unavailable` without writing to `contact_messages` or forwarding a request. The client has not yet approved this temporary form behavior. Existing rows and applied migrations remain for history. A new client-controlled support delivery route and its handling of accidentally submitted medical information must be agreed and verified before reopening the form.
+On October 23, 2026, the client confirmed that WhiteLabelMD is retired. The contact page still shows disabled fields, and the server function returns `unavailable` without writing to `contact_messages` or forwarding a request. On October 26, the client requested restoring the form for general order, account, shipping and website support. Existing rows and applied migrations remain for history. Before reopening submissions, choose and verify a client-controlled support delivery route, restricted access and handling of accidentally submitted medical information. Medical questions must use Beluga's approved secure patient channel once confirmed, not this general form or ordinary email.

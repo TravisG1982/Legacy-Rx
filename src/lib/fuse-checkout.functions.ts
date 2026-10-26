@@ -54,7 +54,7 @@ export const createFuseCheckout = createServerFn({ method: "POST" })
       total: 0,
       status: "pending_payment",
       fuse_session_id: s.sessionId,
-      fuzerx_last_event: "FuseHealth checkout started",
+      provider_last_event: "FuseHealth checkout started",
     } as never);
     if (error) {
       console.error("Could not save FuseHealth checkout session.");

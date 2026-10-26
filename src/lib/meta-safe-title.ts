@@ -20,7 +20,6 @@ const ROUTE_TO_NEUTRAL_TITLE: Record<string, string> = {
   "/medications": `${BRAND} - Programs`,
   "/contact-us": `${BRAND} - Contact`,
   "/qualify": `${BRAND} - Get Started`,
-  "/checkout": `${BRAND} - Checkout`,
   "/not-eligible": `${BRAND} - Thanks`,
   "/lander": BRAND,
   "/lander-1": BRAND,

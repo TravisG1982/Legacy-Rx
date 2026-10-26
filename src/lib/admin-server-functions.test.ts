@@ -4,19 +4,16 @@ import { runWithStartContext } from "@tanstack/start-storage-context";
 const fixture = vi.hoisted(() => ({
   userId: "00000000-0000-0000-0000-000000000001",
   header: null as string | null,
-  role: null as null | { role: "owner" | "staff"; view_leads: boolean; delete_leads: boolean; view_pricing: boolean; manage_coupons: boolean },
+  role: null as null | { role: "owner" | "staff"; view_leads: boolean; delete_leads: boolean; view_pricing: boolean },
   aal: "aal2",
   factors: [{ factor_type: "totp", status: "verified" }],
   audit: [] as Array<{ action: string; object_id?: string | null; result: string; actor_id?: string | null }>,
   deleted: [] as string[],
-  couponMutations: [] as string[],
   deleteError: false,
-  couponError: false,
 }));
 const actorId = fixture.userId;
 const leadId = "00000000-0000-0000-0000-000000000002";
-const couponId = "00000000-0000-0000-0000-000000000003";
-const none = { role: "staff" as const, view_leads: false, delete_leads: false, view_pricing: false, manage_coupons: false };
+const none = { role: "staff" as const, view_leads: false, delete_leads: false, view_pricing: false };
 
 vi.mock("@tanstack/react-start/server", () => ({
   getRequest: () => ({ headers: { get: () => fixture.header } }),
@@ -33,24 +30,14 @@ vi.mock("@/integrations/supabase/client.server", () => ({
       if (table === "admin_audit_log") return { insert: async (row: typeof fixture.audit[number]) => { fixture.audit.push(row); return { error: null }; } };
       if (table === "funnel_leads") return { select: () => ({ order: () => ({ limit: async () => ({ data: [], error: null }) }) }) };
       if (table === "orders") return { select: () => ({ eq: () => ({ order: () => ({ limit: async () => ({ data: [], error: null }) }) }) }) };
-      if (table === "coupons") return {
-        select: () => ({ order: async () => ({ data: [], error: null }) }),
-      };
       throw new Error(`Unexpected table ${table}`);
     },
-    rpc: async (name: string, args: { p_actor_id: string; p_lead_ids?: string[]; p_coupon_id?: string | null }) => {
+    rpc: async (name: string, args: { p_actor_id: string; p_lead_ids?: string[] }) => {
       if (name === "delete_admin_funnel_leads") {
         if (fixture.deleteError) return { data: null, error: { code: "XX000" } };
         fixture.deleted.push(...args.p_lead_ids!);
         for (const id of args.p_lead_ids!) fixture.audit.push({ actor_id: args.p_actor_id, action: "delete_leads", object_id: id, result: "success" });
         return { data: args.p_lead_ids!.length, error: null };
-      }
-      if (name === "save_admin_coupon" || name === "delete_admin_coupon") {
-        if (fixture.couponError) return { data: null, error: { code: "XX000" } };
-        const id = args.p_coupon_id ?? couponId;
-        fixture.couponMutations.push(`${name}:${id}`);
-        fixture.audit.push({ actor_id: args.p_actor_id, action: name === "save_admin_coupon" ? "save_coupon" : "delete_coupon", object_id: id, result: "success" });
-        return { data: id, error: null };
       }
       throw new Error("Unexpected RPC");
     },
@@ -66,9 +53,6 @@ import * as accessFns from "./admin-access.functions.ts?tss-serverfn-split";
 import * as leadFns from "./leads.functions.ts?tss-serverfn-split";
 // @ts-expect-error Vite virtual module.
 import * as priceFns from "./pricing.functions.ts?tss-serverfn-split";
-// @ts-expect-error Vite virtual module.
-import * as couponFns from "./coupons-admin.functions.ts?tss-serverfn-split";
-import { MED_KEYS } from "./legacyrx-data";
 
 const handlers = {
   getAdminStatus: accessFns.getAdminStatus_createServerFn_handler,
@@ -77,16 +61,11 @@ const handlers = {
   deleteFunnelLeads: leadFns.deleteFunnelLeads_createServerFn_handler,
   adminListPricing: priceFns.adminListPricing_createServerFn_handler,
   adminUpdatePricing: priceFns.adminUpdatePricing_createServerFn_handler,
-  adminListCoupons: couponFns.adminListCoupons_createServerFn_handler,
-  adminSaveCoupon: couponFns.adminSaveCoupon_createServerFn_handler,
-  adminDeleteCoupon: couponFns.adminDeleteCoupon_createServerFn_handler,
 };
 
-const validCoupon = { code: "SYNTHETIC", type: "percent", amount: 10, active: true, expires_at: null, max_uses: null, meds: [MED_KEYS[0]] };
 const payloads: Record<keyof typeof handlers, unknown> = {
   getAdminStatus: undefined, listFunnelLeads: {}, authorizeLeadExport: undefined, deleteFunnelLeads: { ids: [leadId] },
   adminListPricing: undefined, adminUpdatePricing: { productId: "1", price: 10 },
-  adminListCoupons: undefined, adminSaveCoupon: validCoupon, adminDeleteCoupon: { id: couponId },
 };
 
 async function call(name: keyof typeof handlers, data = payloads[name], token = true, oldCookie = false) {
@@ -103,14 +82,12 @@ function outcome(result: { result?: unknown; error?: Error }): any {
 }
 
 beforeEach(() => {
-  fixture.role = { role: "owner", view_leads: false, delete_leads: false, view_pricing: false, manage_coupons: false };
+  fixture.role = { role: "owner", view_leads: false, delete_leads: false, view_pricing: false };
   fixture.aal = "aal2";
   fixture.factors = [{ factor_type: "totp", status: "verified" }];
   fixture.audit.length = 0;
   fixture.deleted.length = 0;
-  fixture.couponMutations.length = 0;
   fixture.deleteError = false;
-  fixture.couponError = false;
 });
 
 describe("direct admin server functions", () => {
@@ -130,22 +107,18 @@ describe("direct admin server functions", () => {
     expect(fixture.audit.at(-1)?.result).toBe("denied");
   });
 
-  it("checks staff permissions separately for reads, deletion, pricing and coupons", async () => {
-    fixture.role = { ...none, view_leads: true, manage_coupons: true };
+  it("checks staff permissions separately for reads, deletion, and pricing", async () => {
+    fixture.role = { ...none, view_leads: true };
     expect(outcome(await call("listFunnelLeads")).leads).toEqual([]);
     expect(outcome(await call("authorizeLeadExport")).ok).toBe(true);
     expect(fixture.audit.at(-1)?.action).toBe("export_leads");
     expect((await call("deleteFunnelLeads")).error).toBeTruthy();
     expect((await call("adminListPricing")).error).toBeTruthy();
-    expect(outcome(await call("adminListCoupons"))).toEqual([]);
-    expect(outcome(await call("adminSaveCoupon")).ok).toBe(true);
-    expect(outcome(await call("adminDeleteCoupon")).ok).toBe(true);
     fixture.role = { ...none, delete_leads: true, view_pricing: true };
     expect((await call("authorizeLeadExport")).error).toBeTruthy();
     expect(outcome(await call("deleteFunnelLeads")).deleted).toBe(1);
     expect(outcome(await call("adminListPricing")).authenticated).toBe(true);
     expect(outcome(await call("adminUpdatePricing")).ok).toBe(false);
-    expect((await call("adminSaveCoupon")).error).toBeTruthy();
   });
 
   it("allows owner with TOTP, then denies the next request after role revocation", async () => {
@@ -189,25 +162,9 @@ describe("direct admin server functions", () => {
       ["listFunnelLeads", { t: "bad-token-like-input" }],
       ["deleteFunnelLeads", { ids: ["patient@example.test"] }],
       ["adminUpdatePricing", { productId: "not-an-id", price: -1 }],
-      ["adminSaveCoupon", { ...validCoupon, amount: 101 }],
-      ["adminDeleteCoupon", { id: "bad-token-like-input" }],
     ] as const) expect((await call(name, data)).error).toBeTruthy();
-    expect(fixture.audit.filter((entry) => entry.result === "validation_error")).toHaveLength(5);
+    expect(fixture.audit.filter((entry) => entry.result === "validation_error")).toHaveLength(3);
     expect(JSON.stringify(fixture.audit)).not.toMatch(/patient@example|bad-token-like-input/);
     expect(fixture.deleted).toEqual([]);
-  });
-
-  it("logs coupon database failures", async () => {
-    fixture.couponError = true;
-    expect((await call("adminSaveCoupon")).error).toBeTruthy();
-    expect(fixture.audit.at(-1)?.result).toBe("failure");
-    expect(fixture.couponMutations).toEqual([]);
-  });
-
-  it("writes coupon mutation and success audit in one RPC", async () => {
-    expect(outcome(await call("adminSaveCoupon")).ok).toBe(true);
-    expect(outcome(await call("adminDeleteCoupon")).ok).toBe(true);
-    expect(fixture.couponMutations).toEqual([`save_admin_coupon:${couponId}`, `delete_admin_coupon:${couponId}`]);
-    expect(fixture.audit.filter((entry) => entry.result === "success" && entry.object_id === couponId)).toHaveLength(2);
   });
 });

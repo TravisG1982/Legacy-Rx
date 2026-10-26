@@ -74,8 +74,9 @@ describe("analytics consent boundary", () => {
     saveAnalyticsChoice("accepted");
     for (const path of [
       "/qualify",
-      "/checkout",
       "/start/sema",
+      "/pay-test/sema",
+      "/pay-test/result",
       "/contact-us",
       "/auth",
       "/account",

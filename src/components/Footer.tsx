@@ -39,7 +39,7 @@ export function Footer() {
             <h4>Company</h4>
             <ul>
               <li>
-                <Link to="/account">My account &amp; billing</Link>
+                <Link to="/account">My account</Link>
               </li>
               <li>
                 <Link to="/auth">Member portal</Link>

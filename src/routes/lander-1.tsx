@@ -1,6 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { clearPromo } from "@/lib/funnel-store";
 import { Countdown } from "@/components/Countdown";
 import semaVial from "@/assets/semaglutide-vial.webp";
 import tirzVial from "@/assets/tirzepatide-vial.webp";
@@ -207,7 +205,6 @@ const CSS = `
 `;
 
 function Lander1Page() {
-  useEffect(() => { clearPromo(); }, []);
   const { semaText, tirzText } = useFromPrices();
   return (
     <div className="lander1-root">

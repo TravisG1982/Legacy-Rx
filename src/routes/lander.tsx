@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { clearPromo } from "@/lib/funnel-store";
+import { useState } from "react";
 import semaVial from "@/assets/semaglutide-vial.webp";
 import tirzVial from "@/assets/tirzepatide-vial.webp";
 import brandLogo from "@/assets/legacyrx-burgundy.webp";
@@ -122,7 +121,6 @@ const TESTIMONIALS = [
 ];
 
 function LanderPage() {
-  useEffect(() => { clearPromo(); }, []);
   const { semaText, tirzText } = useFromPrices();
   return (
     <div className="lander-root">

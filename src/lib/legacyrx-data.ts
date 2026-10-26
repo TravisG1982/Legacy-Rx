@@ -29,7 +29,7 @@ export const FAQS: [string, string][] = [
   ["Is the medication FDA-approved?", "No. Our semaglutide (compounded with B12) and tirzepatide (compounded with glycine) are compounded medications and are not FDA-approved. They are not the same as Ozempic, Wegovy, Mounjaro or Zepbound. The FDA does not evaluate compounded medications for safety, effectiveness, or quality. They contain the same active ingredients as some FDA-approved branded products but are different products."],
   ["Who qualifies?", "U.S. adults 18+ in eligible states. Eligibility is determined solely by a licensed clinician based on your confidential medical-history assessment. Not everyone qualifies."],
   ["How fast does it ship?", "After clinical approval, your medication ships from a U.S.-licensed compounding pharmacy with free express, cold-chain shipping - typically within a few business days."],
-  ["Can I cancel anytime?", "Yes. Plans renew monthly after your prepaid period, and you can cancel at any time from My account or by contacting support@legacyrx.net. Refunds and cancellations are handled by our pharmacy partner in line with applicable laws."],
+  ["Can I change or stop my plan?", "Contact support@legacyrx.net to ask about changing or stopping a plan. Refund and cancellation requests are reviewed under our Returns & Refund policy and applicable law."],
   ["What are the most common side effects?", "Most common side effects of GLP-1 medications include nausea, vomiting, diarrhea, constipation, abdominal pain, indigestion, decreased appetite, fatigue, and injection-site reactions. These often lessen over time."],
   ["How does the consultation work?", "You complete a 2-minute online health assessment. A licensed clinician in your state reviews your information, usually within 1 day. In some states a brief video or live-chat consultation may be required."],
   ["Where is the medication compounded?", "All medication is prepared by U.S.-based, state-licensed compounding pharmacies that meet applicable federal and state regulatory standards."],
@@ -92,19 +92,19 @@ export const MEDS: Record<MedKey, MedDef> = {
   tadalafil: { name: "Daily Tadalafil", co: "Tadalafil 5mg Daily Tablets", plans: monthlyOnly(254.9) },
 };
 
-/** Per-product details beyond pricing: product line, renewal price and copy. */
-export const MED_INFO: Record<MedKey, { track: Track; renewal: number; blurb: string; labs?: boolean; fuzerx: string }> = {
-  sema: { track: "glp1", renewal: 168.9, blurb: "Weekly GLP-1 injection for weight loss", fuzerx: "Semaglutide/B12" },
-  tirz: { track: "glp1", renewal: 175, blurb: "Dual-action GLP-1/GIP weight-loss injection", fuzerx: "Tirzepatide" },
-  trt_inj: { track: "trt", renewal: 204, blurb: "Weekly injection - the most proven way to restore testosterone", labs: true, fuzerx: "Testosterone Cypionate" },
-  trt_cream: { track: "trt", renewal: 129, blurb: "Daily pump cream - no needles", fuzerx: "Testosterone Cream Daily Pump" },
-  enclo: { track: "trt", renewal: 216.5, blurb: "Daily pill that helps your body make more of its own testosterone", fuzerx: "Enclomiphene" },
-  estradiol: { track: "hrt", renewal: 99, blurb: "Bioidentical estrogen cream for menopause symptoms", fuzerx: "Estradiol cream" },
-  nad: { track: "aa", renewal: 172.8, blurb: "Cellular energy support for focus, recovery and healthy aging", fuzerx: "NAD+" },
-  sermorelin: { track: "aa", renewal: 179, blurb: "Supports your body's natural growth hormone for sleep, recovery and body composition", fuzerx: "Sermorelin 0.3mg" },
-  skin_cream: { track: "aa", renewal: 99, blurb: "Prescription cream to smooth fine lines and firm skin", fuzerx: "Estriol / Tretinoin Cream - 30g" },
-  sildenafil: { track: "sh", renewal: 253.64, blurb: "Take as needed, about an hour before - works for 4-6 hours", fuzerx: "Sildenafil 100mg Tab" },
-  tadalafil: { track: "sh", renewal: 254.9, blurb: "One small pill a day - always ready", fuzerx: "Tadalafil 5mg Tab" },
+/** Per-product details beyond pricing: product line and copy. */
+export const MED_INFO: Record<MedKey, { track: Track; blurb: string; labs?: boolean }> = {
+  sema: { track: "glp1", blurb: "Weekly GLP-1 injection for weight loss" },
+  tirz: { track: "glp1", blurb: "Dual-action GLP-1/GIP weight-loss injection" },
+  trt_inj: { track: "trt", blurb: "Weekly injection - the most proven way to restore testosterone", labs: true },
+  trt_cream: { track: "trt", blurb: "Daily pump cream - no needles" },
+  enclo: { track: "trt", blurb: "Daily pill that helps your body make more of its own testosterone" },
+  estradiol: { track: "hrt", blurb: "Bioidentical estrogen cream for menopause symptoms" },
+  nad: { track: "aa", blurb: "Cellular energy support for focus, recovery and healthy aging" },
+  sermorelin: { track: "aa", blurb: "Supports your body's natural growth hormone for sleep, recovery and body composition" },
+  skin_cream: { track: "aa", blurb: "Prescription cream to smooth fine lines and firm skin" },
+  sildenafil: { track: "sh", blurb: "Take as needed, about an hour before - works for 4-6 hours" },
+  tadalafil: { track: "sh", blurb: "One small pill a day - always ready" },
 };
 
 export const medsForTrack = (t: Track): MedKey[] => MED_KEYS.filter((k) => MED_INFO[k].track === t && Boolean(FUSE_PROGRAM_IDS[k]));
@@ -160,10 +160,6 @@ export const CHECKOUT_PRODUCT_IDS: Record<MedKey, Partial<Record<Plan["id"], str
   tadalafil: { "1": "tadalafil_1" },
 };
 
-
-export function checkoutUrlFor(med: MedKey, plan: Plan["id"]): string {
-  return `https://checkout.legacyrx.net/?id=${CHECKOUT_PRODUCT_IDS[med][plan] ?? ""}`;
-}
 
 export type CheckoutProduct = {
   productId: string;

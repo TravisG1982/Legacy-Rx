@@ -203,6 +203,66 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_test_orders: {
+        Row: {
+          access_token_hash: string
+          amount_cents: number
+          created_at: string
+          currency: string
+          email: string
+          id: string
+          last_event: string | null
+          last_event_id: string | null
+          medication: string
+          order_number: string
+          plan_id: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token_hash: string
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          email: string
+          id?: string
+          last_event?: string | null
+          last_event_id?: string | null
+          medication: string
+          order_number: string
+          plan_id: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token_hash?: string
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          email?: string
+          id?: string
+          last_event?: string | null
+          last_event_id?: string | null
+          medication?: string
+          order_number?: string
+          plan_id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_test_webhook_events: {
+        Row: { event_id: string; event_type: string; received_at: string }
+        Insert: { event_id: string; event_type: string; received_at?: string }
+        Update: { event_id?: string; event_type?: string; received_at?: string }
+        Relationships: []
+      }
       order_failures: {
         Row: {
           amount: number | null
@@ -286,6 +346,7 @@ export type Database = {
           plan_id: string
           product_id: string
           product_name: string
+          provider_last_event: string | null
           session_id: string | null
           state: string | null
           status: string
@@ -330,6 +391,7 @@ export type Database = {
           plan_id: string
           product_id: string
           product_name: string
+          provider_last_event?: string | null
           session_id?: string | null
           state?: string | null
           status?: string
@@ -374,6 +436,7 @@ export type Database = {
           plan_id?: string
           product_id?: string
           product_name?: string
+          provider_last_event?: string | null
           session_id?: string | null
           state?: string | null
           status?: string
@@ -451,6 +514,7 @@ export type Database = {
       delete_admin_coupon: { Args: { p_actor_id: string; p_coupon_id: string }; Returns: undefined }
       delete_admin_funnel_leads: { Args: { p_actor_id: string; p_lead_ids: string[] }; Returns: number }
       save_admin_coupon: { Args: { p_actor_id: string; p_coupon_id: string | null; p_code: string; p_type: string; p_amount: number; p_active: boolean; p_expires_at: string | null; p_max_uses: number | null; p_meds: string[] }; Returns: string }
+      apply_payment_test_event: { Args: { p_event_id: string; p_event_type: string; p_order_id: string; p_session_id: string | null; p_payment_intent_id: string | null; p_target_status: string; p_amount_cents: number | null; p_currency: string | null }; Returns: string }
       claim_verified_guest_records: { Args: { _user_id: string }; Returns: string }
       redeem_coupon: { Args: { _code: string }; Returns: undefined }
     }
