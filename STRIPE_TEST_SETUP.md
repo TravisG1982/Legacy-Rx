@@ -45,6 +45,8 @@ Existing variables used: `SESSION_SECRET` and Supabase keys. `STRIPE_TEST_RETURN
 ### After merge: QA on the main Vercel deployment
 The main deployment may continue to run this **test-only** path while Beluga is pending. In Stripe's test/sandbox mode, add the separate `https://legacy-rx.vercel.app/api/public/webhooks/stripe-test` destination with the seven events above. In Vercel **Production**, add the variables from the table, with `STRIPE_TEST_RETURN_ORIGIN=https://legacy-rx.vercel.app` and `STRIPE_TEST_WEBHOOK_SECRET` set to the **main destination's** signing secret. Keep `STRIPE_TEST_SECRET_KEY` an `sk_test_` key and `STRIPE_TEST_ALLOWED_EMAIL` restricted to the verified QA account. Redeploy Production after saving the variables. This does not enable live charges or replace the existing FuseHealth checkout. Use synthetic QA data only.
 
+Before testing a payment on the main deployment, temporarily disable the **Preview** webhook destination in Stripe. Both destinations otherwise receive the same sandbox events and write to the same Supabase tables; Preview could update the order first and mask a broken main webhook. Check delivery to the main destination and its response, then re-enable Preview only if more Preview QA is needed.
+
 ### 4. Try it
 1. Sign in with the verified QA account matching `STRIPE_TEST_ALLOWED_EMAIL`. Complete `/qualify` for a product using that same email and synthetic answers, then open `/pay-test/<med>` and press **Continue to test payment**. A different or signed-out account is rejected by the server.
 2. Success: card `4242 4242 4242 4242`, any future expiry, any CVC. The result page shows "Payment received (test mode)" once the webhook arrives.
