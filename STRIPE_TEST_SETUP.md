@@ -58,6 +58,13 @@ The main deployment may continue to run this **test-only** path while Beluga is 
 - Statuses only move forward: `pending_payment` < `abandoned`/`payment_failed` < `authorized` < `paid`. A late failure or expiry cannot undo a payment. A paid event whose amount or currency differs from the order marks it `order_error` and is never treated as paid.
 - The order's private link (token in the redirect URL) is the only way to read a test order; the database stores only its hash.
 
+## Preview QA record (2026-10-26)
+- Verified Checkout with the exact QA account `thisissoftwaredevv@gmail.com` and synthetic assessment data. A `4242` test-card payment returned to LegacyRX and showed `Payment received (test mode)`; Supabase stored the order as `paid`.
+- A `4000 0000 0000 0002` test-card attempt was declined in Stripe. After the `payment_intent.payment_failed` webhook was redelivered, the same order became `payment_failed`; returning from Checkout showed `The payment did not go through. You can try again.`
+- Starting payment again reused the same open Checkout session and order number. A subsequent `4242` payment advanced that order to `paid`; Supabase recorded `payment_intent.succeeded` as its last event.
+- Redelivering `checkout.session.completed` returned HTTP 200 without creating a second event row or changing the paid status. The previously failed payment webhook also returned HTTP 200 after the SQL fix. Both orders remained `paid` after later webhook delivery.
+- Automated verification: 101 tests in 16 files, TypeScript check, and Vercel production build passed. The hosted Preview test did not cover manual capture, refunds, Beluga handoff, or live payments; those need the agreed payment contract.
+
 ## Provisional choices (revisit with Beluga)
 - Capture timing: default is immediate capture; `manual` is available for authorize-only testing. Nothing captures funds later or voids/refunds yet.
 - Not included: refunds, cancellations, disputes, subscriptions and renewals, receipts, account/dashboard display, linking to a Beluga intake, tax, shipping.
