@@ -35,8 +35,8 @@ logs/
 .vite/
 .turbo/
 
-# Lovable planning notes are not application source
-.lovable/plan/
+# Lovable metadata and planning notes are not application source
+.lovable/
 
 # Local development context and agent notes
 agents/
