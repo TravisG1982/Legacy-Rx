@@ -129,15 +129,15 @@ section.lx { padding: 48px 0; }
 .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .site-header:has(.nav-links.open) { z-index: 110; }
 .site-header .container-lx { max-width: 1440px; }
-.nav { display: flex; align-items: center; gap: 22px; height: 72px; }
-.nav-logo { display: flex; align-items: center; flex: none; }
+.nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 22px; height: 72px; }
+.nav-logo { grid-column: 1; grid-row: 1; justify-self: start; display: flex; align-items: center; }
 .nav-logo-image { display: block; width: auto; height: 36px; max-width: 100%; }
-.nav-links { order: 1; display: flex; gap: clamp(12px, 1.5vw, 22px); align-items: center; margin-left: auto; }
+.nav-links { grid-column: 2; grid-row: 1; justify-self: center; display: flex; gap: clamp(12px, 1.5vw, 22px); align-items: center; white-space: nowrap; }
 .nav-links a { font-weight: 500; font-size: .95rem; color: var(--muted); }
 .nav-links a:hover { color: var(--burgundy); }
-.nav-cta { order: 2; display: flex; align-items: center; flex: none; }
+.nav-cta { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; }
 .nav-cta .btn { white-space: nowrap; }
-.burger { order: 3; display: none; width: 44px; height: 44px; align-items: center; justify-content: center; background: none; border: 0; cursor: pointer; font-size: 1.5rem; color: var(--burgundy); }
+.burger { display: none; width: 44px; height: 44px; align-items: center; justify-content: center; background: none; border: 0; cursor: pointer; font-size: 1.5rem; color: var(--burgundy); }
 
 .hero { background: linear-gradient(180deg, var(--cream) 0%, var(--cream-warm) 100%); position: relative; overflow: hidden; }
 .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; }
@@ -412,7 +412,7 @@ a.trust-badge:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px 
 }
 
 @media (max-width: 1260px) {
-  .nav { height: 64px; gap: 12px; }
+  .nav { display: flex; height: 64px; gap: 12px; }
   .nav-cta { margin-left: auto; }
   .nav-links { display: none; }
   .nav-links.open { display: flex; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; align-items: stretch; margin: 0; background: var(--cream); padding: 16px max(18px, calc((100vw - 1140px) / 2)); border-bottom: 1px solid var(--line); gap: 0; z-index: 60; max-height: calc(100dvh - 64px); overflow-y: auto; box-shadow: 0 12px 22px -18px var(--ink); }
