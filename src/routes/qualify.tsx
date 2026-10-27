@@ -382,7 +382,9 @@ function QualifyPage() {
           <h2 className="qcard-title">Which state do you live in?</h2>
           <p className="qsub">This helps us connect you with a licensed provider in your state.</p>
           <div className="field" data-field="state">
+            <label htmlFor="qualify-state">State</label>
             <select
+              id="qualify-state"
               value={state}
               onChange={(e) => { setState(e.target.value); setErrors1((p) => ({ ...p, state: undefined })); }}
               className={errors1.state ? "invalid" : undefined}
@@ -394,8 +396,10 @@ function QualifyPage() {
           </div>
           <div className="lx-grid grid-2">
             <div className="field" data-field="firstName">
-              <label>First Name</label>
+              <label htmlFor="qualify-first-name">First Name</label>
               <input
+                id="qualify-first-name"
+                autoComplete="given-name"
                 placeholder="John"
                 value={firstName}
                 onChange={(e) => { setFirstName(e.target.value); setErrors1((p) => ({ ...p, firstName: undefined })); }}
@@ -404,8 +408,10 @@ function QualifyPage() {
               {errors1.firstName && <div className="field-error">{errors1.firstName}</div>}
             </div>
             <div className="field" data-field="lastName">
-              <label>Last Name</label>
+              <label htmlFor="qualify-last-name">Last Name</label>
               <input
+                id="qualify-last-name"
+                autoComplete="family-name"
                 placeholder="Smith"
                 value={lastName}
                 onChange={(e) => { setLastName(e.target.value); setErrors1((p) => ({ ...p, lastName: undefined })); }}
@@ -415,9 +421,11 @@ function QualifyPage() {
             </div>
           </div>
           <div className="field" data-field="email">
-            <label>Email</label>
+            <label htmlFor="qualify-email">Email</label>
             <input
+              id="qualify-email"
               type="email"
+              autoComplete="email"
               placeholder="john@example.com"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setErrors1((p) => ({ ...p, email: undefined })); }}
@@ -448,8 +456,11 @@ function QualifyPage() {
           </label>
 
           <div className="field" data-field="phone">
-            <label>Phone Number</label>
+            <label htmlFor="qualify-phone">Phone Number</label>
             <input
+              id="qualify-phone"
+              type="tel"
+              autoComplete="tel"
               placeholder="(555) 123-4567"
               value={phone}
               onChange={(e) => { setPhone(e.target.value); setErrors1((p) => ({ ...p, phone: undefined })); }}
@@ -458,17 +469,17 @@ function QualifyPage() {
             {errors1.phone && <div className="field-error">{errors1.phone}</div>}
           </div>
 
-          <p style={{ fontWeight: 600, margin: "16px 0 6px" }}>Are you 18 or older?</p>
-          <div className="yesno" data-field="age18">
-            <button type="button" className={`opt ${age18 === "yes" ? "selected" : ""}`} onClick={() => { setAge18("yes"); setErrors1((p) => ({ ...p, age18: undefined })); }}>Yes<span className="optcheck" aria-hidden="true">✓</span></button>
-            <button type="button" className={`opt ${age18 === "no" ? "selected" : ""}`} onClick={() => { setAge18("no"); setErrors1((p) => ({ ...p, age18: undefined })); }}>No<span className="optcheck" aria-hidden="true">✓</span></button>
+          <p id="qualify-age-question" style={{ fontWeight: 600, margin: "16px 0 6px" }}>Are you 18 or older?</p>
+          <div className="yesno" data-field="age18" role="group" aria-labelledby="qualify-age-question">
+            <button type="button" aria-pressed={age18 === "yes"} className={`opt ${age18 === "yes" ? "selected" : ""}`} onClick={() => { setAge18("yes"); setErrors1((p) => ({ ...p, age18: undefined })); }}>Yes<span className="optcheck" aria-hidden="true">✓</span></button>
+            <button type="button" aria-pressed={age18 === "no"} className={`opt ${age18 === "no" ? "selected" : ""}`} onClick={() => { setAge18("no"); setErrors1((p) => ({ ...p, age18: undefined })); }}>No<span className="optcheck" aria-hidden="true">✓</span></button>
           </div>
           {errors1.age18 && <div className="field-error">{errors1.age18}</div>}
 
-          <p style={{ fontWeight: 600, margin: "18px 0 6px" }}>{track === "glp1" ? "Are you currently taking a GLP-1 medication?" : track === "sh" ? "Are you currently taking any ED medication?" : "Are you currently taking any hormone medication?"}</p>
-          <div className="yesno" data-field="onGlp1">
-            <button type="button" className={`opt ${onGlp1 === "yes" ? "selected" : ""}`} onClick={() => { setOnGlp1("yes"); setErrors1((p) => ({ ...p, onGlp1: undefined })); }}>Yes<span className="optcheck" aria-hidden="true">✓</span></button>
-            <button type="button" className={`opt ${onGlp1 === "no" ? "selected" : ""}`} onClick={() => { setOnGlp1("no"); setErrors1((p) => ({ ...p, onGlp1: undefined })); }}>No<span className="optcheck" aria-hidden="true">✓</span></button>
+          <p id="qualify-medication-question" style={{ fontWeight: 600, margin: "18px 0 6px" }}>{track === "glp1" ? "Are you currently taking a GLP-1 medication?" : track === "sh" ? "Are you currently taking any ED medication?" : "Are you currently taking any hormone medication?"}</p>
+          <div className="yesno" data-field="onGlp1" role="group" aria-labelledby="qualify-medication-question">
+            <button type="button" aria-pressed={onGlp1 === "yes"} className={`opt ${onGlp1 === "yes" ? "selected" : ""}`} onClick={() => { setOnGlp1("yes"); setErrors1((p) => ({ ...p, onGlp1: undefined })); }}>Yes<span className="optcheck" aria-hidden="true">✓</span></button>
+            <button type="button" aria-pressed={onGlp1 === "no"} className={`opt ${onGlp1 === "no" ? "selected" : ""}`} onClick={() => { setOnGlp1("no"); setErrors1((p) => ({ ...p, onGlp1: undefined })); }}>No<span className="optcheck" aria-hidden="true">✓</span></button>
           </div>
           {errors1.onGlp1 && <div className="field-error">{errors1.onGlp1}</div>}
 
@@ -517,14 +528,14 @@ function QualifyPage() {
         <div>
           <h2 className="qcard-title">Do any of these apply to you?</h2>
           <p className="qsub">This helps our doctors ensure your safety.</p>
-          <div data-field="conditions" className={`none-card ${none ? "selected" : ""}`} onClick={() => { setNone(true); setConds(new Set()); setStep2Error(null); }}>
-            <input type="radio" checked={none} readOnly />
+          <label data-field="conditions" className={`none-card ${none ? "selected" : ""}`}>
+            <input type="checkbox" checked={none} onChange={(event) => { setNone(event.target.checked); if (event.target.checked) setConds(new Set()); setStep2Error(null); }} />
             <div>
               <strong>None of these apply to me</strong>
               <br />
               <span className="lx-muted" style={{ fontSize: ".85rem" }}>Most people select this option</span>
             </div>
-          </div>
+          </label>
           <div className="divider-or">Or check any that apply</div>
 
           {conditionList.map((c, i) => (
@@ -535,10 +546,10 @@ function QualifyPage() {
           ))}
           {track !== "glp1" && track !== "sh" && (
             <>
-              <p style={{ fontWeight: 600, margin: "18px 0 6px" }}>Have you had blood work (hormone levels) in the past 6 months?</p>
-              <div className="yesno">
-                <button type="button" className={`opt ${labs === "yes" ? "selected" : ""}`} onClick={() => { setLabs("yes"); setStep2Error(null); }}>Yes<span className="optcheck" aria-hidden="true">✓</span></button>
-                <button type="button" className={`opt ${labs === "no" ? "selected" : ""}`} onClick={() => { setLabs("no"); setStep2Error(null); }}>No<span className="optcheck" aria-hidden="true">✓</span></button>
+              <p id="qualify-labs-question" style={{ fontWeight: 600, margin: "18px 0 6px" }}>Have you had blood work (hormone levels) in the past 6 months?</p>
+              <div className="yesno" role="group" aria-labelledby="qualify-labs-question">
+                <button type="button" aria-pressed={labs === "yes"} className={`opt ${labs === "yes" ? "selected" : ""}`} onClick={() => { setLabs("yes"); setStep2Error(null); }}>Yes<span className="optcheck" aria-hidden="true">✓</span></button>
+                <button type="button" aria-pressed={labs === "no"} className={`opt ${labs === "no" ? "selected" : ""}`} onClick={() => { setLabs("no"); setStep2Error(null); }}>No<span className="optcheck" aria-hidden="true">✓</span></button>
               </div>
               <p className="lx-muted" style={{ fontSize: ".82rem", marginTop: 6 }}>
                 {labs === "no"
@@ -566,10 +577,10 @@ function QualifyPage() {
           <div className="expires">✓ Flat monthly pricing</div>
 
 
-          <p style={{ fontWeight: 600, marginBottom: 8 }}>Choose Your Medication</p>
-          <div className="med-toggle">
+          <p id="qualify-med-choice" style={{ fontWeight: 600, marginBottom: 8 }}>Choose Your Medication</p>
+          <div className="med-toggle" role="group" aria-labelledby="qualify-med-choice">
             {trackMeds.map((k) => (
-              <button key={k} type="button" className={`opt ${med === k ? "selected" : ""}`} onClick={() => { setMed(k); setPlan(defaultPlan(k)); }}>
+              <button key={k} type="button" aria-pressed={med === k} className={`opt ${med === k ? "selected" : ""}`} onClick={() => { setMed(k); setPlan(defaultPlan(k)); }}>
                 {MEDS[k].name}
                 <span className="medfrom">
                   {k === "sema" ? `from ${money(livePrice("sema", "3").monthly)}/mo`
@@ -582,38 +593,42 @@ function QualifyPage() {
           </div>
 
 
-          <p style={{ fontWeight: 600, marginBottom: 4 }}>Select Your Plan</p>
+          <p id="qualify-plan-choice" style={{ fontWeight: 600, marginBottom: 4 }}>Select Your Plan</p>
           <SpotsLeft />
 
+          <div role="group" aria-labelledby="qualify-plan-choice">
           {MEDS[med].plans.map((p) => (
-            <div
+            <button
               key={p.id}
+              type="button"
+              aria-pressed={plan === p.id}
               className={`planrow ${plan === p.id ? "selected" : ""}`}
               onClick={() => setPlan(p.id)}
             >
               {p.badgeText && <span className={`plan-badge ${p.badge}`}>{p.badgeText}</span>}
-              <div>
-                <div style={{ fontWeight: 700 }}>{p.label}</div>
-                <div className="lx-muted" style={{ fontSize: ".85rem" }}>
+              <span className="planrow-details">
+                <span style={{ fontWeight: 700 }}>{p.label}</span>
+                <span className="lx-muted" style={{ fontSize: ".85rem" }}>
                   {p.then
                     ? `Then ${money(p.then)}/mo`
                     : `${money(livePrice(med, p.id).total)} total`}
-                </div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                </span>
+              </span>
+              <span style={{ textAlign: "right", flexShrink: 0 }}>
 
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 3, whiteSpace: "nowrap" }}>
+                <span style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 3, whiteSpace: "nowrap" }}>
                   <span className="pmo">{money(livePrice(med, p.id).monthly)}</span>
                   <span className="lx-muted" style={{ fontSize: ".78rem" }}>{p.then ? "first month" : "/month"}</span>
-                </div>
+                </span>
                 {p.save > 0 && <span className="save-pill">SAVE ${p.save.toLocaleString("en-US")}</span>}
-              </div>
+              </span>
 
 
 
 
-            </div>
+            </button>
           ))}
+          </div>
 
           <p className="lx-muted" style={{ fontSize: ".85rem", margin: "14px 0" }}>
             Your full application will be reviewed by a U.S.-licensed doctor after your purchase.

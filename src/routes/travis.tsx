@@ -491,6 +491,7 @@ function LeadsDashboard({ leads: initialLeads, canDelete }: { leads: LeadRow[]; 
         </strong>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", position: "relative" }}>
           <input
+            aria-label="Search leads by name or email"
             placeholder="Search name or email"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -499,6 +500,7 @@ function LeadsDashboard({ leads: initialLeads, canDelete }: { leads: LeadRow[]; 
           <button
             type="button"
             className={salesOnly ? "btn btn-primary" : "btn btn-ghost"}
+            aria-pressed={salesOnly}
             onClick={() => { setSalesOnly((v) => !v); setAbandonedOnly(false); }}
           >
             Sales only
@@ -506,6 +508,7 @@ function LeadsDashboard({ leads: initialLeads, canDelete }: { leads: LeadRow[]; 
           <button
             type="button"
             className={abandonedOnly ? "btn btn-primary" : "btn btn-ghost"}
+            aria-pressed={abandonedOnly}
             onClick={() => { setAbandonedOnly((v) => !v); setSalesOnly(false); }}
           >
             Abandoned checkout
@@ -659,7 +662,7 @@ function LeadsDashboard({ leads: initialLeads, canDelete }: { leads: LeadRow[]; 
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1100 }}>
           <thead>
             <tr>
-              <th style={{ ...th, width: 44 }}>
+              <th scope="col" style={{ ...th, width: 44 }}>
                 <input
                   type="checkbox"
                   aria-label="Select all leads"
@@ -668,16 +671,16 @@ function LeadsDashboard({ leads: initialLeads, canDelete }: { leads: LeadRow[]; 
                   style={{ width: 16, height: 16 }}
                 />
               </th>
-              <th style={th}>Received (EST)</th>
-              <th style={th}>Name</th>
-              <th style={th}>Email</th>
-              <th style={th}>Phone</th>
-              <th style={th}>State</th>
-              <th style={th}>18+</th>
-              <th style={th}>On GLP-1</th>
-              <th style={th}>Dropped off at</th>
-              <th style={th}>Order</th>
-              <th style={th}>Consents</th>
+              <th scope="col" style={th}>Received (EST)</th>
+              <th scope="col" style={th}>Name</th>
+              <th scope="col" style={th}>Email</th>
+              <th scope="col" style={th}>Phone</th>
+              <th scope="col" style={th}>State</th>
+              <th scope="col" style={th}>18+</th>
+              <th scope="col" style={th}>On GLP-1</th>
+              <th scope="col" style={th}>Dropped off at</th>
+              <th scope="col" style={th}>Order</th>
+              <th scope="col" style={th}>Consents</th>
             </tr>
           </thead>
           <tbody>
@@ -693,7 +696,7 @@ function LeadsDashboard({ leads: initialLeads, canDelete }: { leads: LeadRow[]; 
                 <td style={td}>
                   <input
                     type="checkbox"
-                    aria-label="Select lead"
+                    aria-label={`Select lead ${`${l.first_name ?? ""} ${l.last_name ?? ""}`.trim() || l.email || l.id}`}
                     checked={selected.has(l.id)}
                     onChange={() => toggleOne(l.id)}
                     style={{ width: 16, height: 16 }}

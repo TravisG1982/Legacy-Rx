@@ -80,8 +80,8 @@ const TOPICS = [
     id: "medical",
     label: "Where should I ask a medical question?",
     answer:
-      "Medical questions belong with the clinical partner through an approved secure channel. If you have not been given one, ask general support how to reach the clinical team without including symptoms or medical history in that message.",
-    links: [["General support", "/contact-us"]],
+      "Medical questions are handled by the Beluga care team through an approved secure channel, not by this guide or general support. That channel is not available on this site yet. Please do not send symptoms or medical history by email or the general form.",
+    links: [["Medical question options", "/contact-us", "medical"]],
   },
   {
     id: "status",
@@ -94,7 +94,10 @@ const TOPICS = [
 
 type TopicId = (typeof TOPICS)[number]["id"];
 
-/** Fixed topics keep patient-entered text out of third-party AI services. */
+/**
+ * Ready-made quick answers, not an AI chat. Fixed topics keep patient-entered text out of
+ * third-party AI services, so there is deliberately no free-text input here.
+ */
 export function OrderHelp({ orderNumbers }: { orderNumbers?: readonly string[] }) {
   const loadStatus = useServerFn(getMyOrderStatus);
   const [open, setOpen] = useState(false);
@@ -121,20 +124,30 @@ export function OrderHelp({ orderNumbers }: { orderNumbers?: readonly string[] }
   }
 
   return (
-    <div className="order-help">
+    <section className="order-help" aria-labelledby={open ? "order-help-title" : undefined}>
       {!open ? (
-        <button type="button" className="order-help-toggle" onClick={() => setOpen(true)}>
-          Need help with products or your order?
+        <button
+          type="button"
+          className="order-help-toggle"
+          aria-expanded="false"
+          aria-controls="order-help-panel"
+          onClick={() => setOpen(true)}
+        >
+          <span className="order-help-toggle-title">Quick answers</span>
+          <span className="order-help-toggle-sub">Products, checkout, support and your orders</span>
         </button>
       ) : (
-        <div className="order-help-box">
+        <div className="order-help-box" id="order-help-panel">
           <div className="order-help-head">
-            <strong>How can we help?</strong>
+            <div>
+              <h2 id="order-help-title" className="order-help-title">Quick answers</h2>
+              <p className="order-help-sub">Ready-made answers to common questions. This is not a chat.</p>
+            </div>
             <button
               type="button"
               className="order-help-close"
               onClick={() => setOpen(false)}
-              aria-label="Close help"
+              aria-label="Close quick answers"
             >
               ×
             </button>
@@ -160,9 +173,13 @@ export function OrderHelp({ orderNumbers }: { orderNumbers?: readonly string[] }
             <p>{topic.answer}</p>
             {"links" in topic && (
               <div className="order-help-links">
-                {topic.links.map(([label, to]) => (
-                  <Link key={to} to={to}>
-                    {label}
+                {topic.links.map((link) => (
+                  <Link
+                    key={link[0]}
+                    to={link[1]}
+                    search={link[2] === "medical" ? { subject: "medical" } : undefined}
+                  >
+                    {link[0]} <span aria-hidden="true">→</span>
                   </Link>
                 ))}
               </div>
@@ -179,6 +196,7 @@ export function OrderHelp({ orderNumbers }: { orderNumbers?: readonly string[] }
                     onChange={(e) => {
                       setOrderNumber(e.target.value);
                       setStatusAnswer(null);
+                      setError(null);
                     }}
                   >
                     <option value="">Select an order</option>
@@ -193,32 +211,47 @@ export function OrderHelp({ orderNumbers }: { orderNumbers?: readonly string[] }
                   type="button"
                   className="btn btn-primary"
                   disabled={!orderNumber || busy}
+                  aria-busy={busy}
                   onClick={() => void showStatus()}
                 >
                   {busy ? "Checking…" : "Check order status"}
                 </button>
-                {statusAnswer && (
-                  <p className="order-help-answer" aria-live="polite">
-                    {statusAnswer}
-                  </p>
-                )}
-                {error && (
-                  <p className="order-help-error" role="alert">
-                    {error}
-                  </p>
-                )}
+                <div aria-live="polite">
+                  {statusAnswer && <p className="order-help-result">{statusAnswer}</p>}
+                  {error && (
+                    <p className="order-help-error" role="alert">
+                      {error}
+                    </p>
+                  )}
+                </div>
               </div>
             ) : (
               <p className="order-help-note">
                 No completed orders are linked to this verified account yet.
               </p>
             ))}
+          {topicId === "status" && !orderNumbers && (
+            <p className="order-help-note">Sign in to check the status of a specific order.</p>
+          )}
+          <div className="order-help-assistant">
+            <button
+              type="button"
+              className="btn order-help-assistant-btn"
+              disabled
+              aria-describedby="order-help-assistant-note"
+            >
+              Ask our assistant — coming soon
+            </button>
+            <p id="order-help-assistant-note" className="order-help-note">
+              An assistant for general questions is being planned. It is not connected yet.
+            </p>
+          </div>
           <p className="order-help-note">
-            This guide answers general questions only. A licensed clinician handles medical
+            Quick answers cover general questions only. A licensed clinician handles medical
             decisions. Do not send medical details through general support.
           </p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

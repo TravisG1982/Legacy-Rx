@@ -115,7 +115,7 @@ function AuthPage() {
           {mode === "in" ? "Sign in" : "Create account"}
         </h1>
         <p className="lx-muted" style={{ margin: "0 0 20px", fontSize: ".9rem" }}>
-          Use the same email you ordered with to see your orders and manage your plan.
+          Use the same email you ordered with to see your orders.
         </p>
         <button
           type="button"
@@ -133,28 +133,35 @@ function AuthPage() {
           or
         </div>
         <form onSubmit={submit} style={{ display: "grid", gap: 10 }}>
-          <input
-            type="email"
-            required
-            placeholder="you@example.com"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            required
-            minLength={8}
-            placeholder="Password"
-            autoComplete={mode === "in" ? "current-password" : "new-password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="field">
+            <label htmlFor="auth-email">Email</label>
+            <input
+              id="auth-email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="auth-password">Password</label>
+            <input
+              id="auth-password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete={mode === "in" ? "current-password" : "new-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
           <button className="btn btn-primary" disabled={busy}>
             {busy ? "Please wait..." : mode === "in" ? "Sign in" : "Create account"}
           </button>
         </form>
-        {msg && <p style={{ marginTop: 12, fontSize: ".9rem" }}>{msg}</p>}
+        {msg && <p role="status" style={{ marginTop: 12, fontSize: ".9rem" }}>{msg}</p>}
         <button
           type="button"
           className="lx-muted"

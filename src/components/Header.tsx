@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LogoMark } from "./Brand";
 
 export function TrustBar() {
@@ -13,13 +13,44 @@ export function TrustBar() {
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
   return (
     <header className="site-header">
       <div className="container-lx nav">
-        <Link to="/" aria-label="LegacyRX home" style={{ display: "flex", alignItems: "center" }}>
+        <Link className="nav-logo" to="/" aria-label="LegacyRX home">
           <LogoMark />
         </Link>
-        <nav className={`nav-links ${open ? "open" : ""}`} onClick={() => setOpen(false)}>
+        <div className="nav-cta">
+          <Link className="btn btn-primary" to="/qualify">
+            Get started →
+          </Link>
+        </div>
+        <button
+          type="button"
+          className="burger"
+          aria-label={open ? "Close navigation" : "Open navigation"}
+          aria-expanded={open}
+          aria-controls="primary-navigation"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? "×" : "☰"}
+        </button>
+        <nav
+          id="primary-navigation"
+          aria-label="Primary navigation"
+          className={`nav-links ${open ? "open" : ""}`}
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest("a")) setOpen(false);
+          }}
+        >
           <Link to="/">Home</Link>
           <Link to="/how-it-works">How It Works</Link>
           <Link to="/medications">Weight Loss</Link>
@@ -32,19 +63,6 @@ export function Header() {
           <Link to="/contact-us">Contact</Link>
           <Link to="/auth">Login</Link>
         </nav>
-        <div className="nav-cta">
-          <Link className="btn btn-primary" to="/qualify">
-            Get started →
-          </Link>
-        </div>
-        <button
-          type="button"
-          className="burger"
-          aria-label="Toggle navigation"
-          onClick={() => setOpen((v) => !v)}
-        >
-          ☰
-        </button>
       </div>
     </header>
   );
