@@ -10,7 +10,7 @@ export function Wordmark({ cream = false }: { cream?: boolean }) {
 }
 
 export function LogoMark({ alt = "LegacyRX" }: { alt?: string }) {
-  return <img loading="lazy" decoding="async" src={logo} alt={alt} style={{ height: 36, width: "auto", display: "block" }} />;
+  return <img className="nav-logo-image" decoding="async" src={logo} alt={alt} />;
 }
 
 export function CtaBand() {

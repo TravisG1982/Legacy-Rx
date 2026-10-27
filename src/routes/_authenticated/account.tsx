@@ -80,10 +80,8 @@ function AccountPage() {
         {data?.orders.map((o) => (
           <div
             key={o.order_number}
+            className="account-order"
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 12,
               padding: "10px 0",
               borderTop: "1px solid var(--border, #eee)",
             }}
@@ -94,7 +92,7 @@ function AccountPage() {
                 #{o.order_number} · {fmt(o.created_at)}
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
+            <div className="account-order-summary">
               <div>${Number(o.total).toFixed(2)}</div>
               <div className="lx-muted" style={{ fontSize: ".8rem" }}>
                 {orderStatusMessage(o.status)}

@@ -90,7 +90,7 @@ const ORDERING: [string, string][] = [
   ],
   [
     "What if I have a problem with my order or my account?",
-    "Click on the \"Contact us\" section of this site and create a ticket. Our team will then review and get back to you to resolve your inquiry.",
+    "Visit Contact us for the current phone and email options for general order or account support. Please do not include medical details in an ordinary email.",
   ],
   [
     "How long will it take to get my medication?",
@@ -109,7 +109,7 @@ const RETURNS: [string, string][] = [
   ],
   [
     "Can I return my medications once I receive them?",
-    "Federal and State law do not allow medication returns. Therefore, all sales are final. If you have a specific concern, please create a ticket in the \"Contact us\" section and we'll get back with you.",
+    "Federal and State law do not allow medication returns. Therefore, all sales are final. If you have a specific concern, visit Contact us for the current general support options. Do not send medical details by ordinary email.",
   ],
 ];
 

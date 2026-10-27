@@ -158,9 +158,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       {!isFunnel && !isChromeless && <TrustBar />}
       {!isFunnel && !isChromeless && <Header />}
-      <main style={isFunnel ? { background: "#f7f5f1", minHeight: "100vh" } : undefined}>
+      <main id="main-content" tabIndex={-1} style={isFunnel ? { background: "#f7f5f1", minHeight: "100vh" } : undefined}>
         <Outlet />
       </main>
       {!isFunnel && !isChromeless && <Footer />}
