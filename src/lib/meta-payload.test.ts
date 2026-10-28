@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildMetaPayload, isBrowserPixelEvent, type MetaEventPayload } from "./analytics";
+import {
+  baseUserData,
+  buildMetaPayload,
+  isBrowserPixelEvent,
+  type MetaEventPayload,
+} from "./analytics";
 import { HEALTH_CATEGORY_PATTERN } from "./meta-safe-title";
 
 /**
@@ -116,14 +121,18 @@ describe("Meta payload minimization", () => {
     }
   });
 
-  describe("transport routing", () => {
-    it("does not send any events through browser Pixel", () => {
-      expect(isBrowserPixelEvent("PageView")).toBe(false);
-      expect(isBrowserPixelEvent("ViewContent")).toBe(false);
-    });
+  it("builds a payload without generating any identifier or cookie while disabled", () => {
+    expect(baseUserData()).toEqual({});
+    const p = buildMetaPayload("PageView", "evt-6", { sourceUrl: "https://legacyrx.net/" });
+    expect(p.user_data).toEqual({});
+    expect("test_event_code" in p).toBe(false);
+  });
 
-    it("sends the four conversion events server-side only", () => {
+  describe("transport routing", () => {
+    it("routes no event through the browser Pixel", () => {
       for (const name of [
+        "PageView",
+        "ViewContent",
         "CompleteRegistration",
         "AddToCart",
         "InitiateCheckout",

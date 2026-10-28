@@ -15,12 +15,10 @@ import appCss from "../styles.css?url";
 import faviconAsset from "../assets/favicon.png";
 import { Header, TrustBar } from "../components/Header";
 import { Footer } from "../components/Footer";
-import { CookieConsent } from "../components/CookieConsent";
 import { Toaster } from "../components/ui/sonner";
 import { purgeLegacyPromo } from "../lib/funnel-store";
 
-import { trackMeta } from "../lib/analytics";
-import { CONSENT_CHANGED_EVENT, isProtectedPage } from "../lib/analytics-consent";
+import { purgeLegacyTrackingState } from "../lib/analytics-consent";
 
 const FUNNEL_PATHS = new Set(["/qualify"]);
 const CHROMELESS_PATHS = new Set([
@@ -146,15 +144,11 @@ function RootComponent() {
     purgeLegacyPromo();
   }, []);
 
+  // GA4, Meta, GTM and every other marketing tracker are intentionally off (client
+  // decision). Only clear leftovers from earlier builds; never start tracking here.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    // Only the minimized, consented server relay remains active while external
-    // GTM, GA4, Pixel, Clarity and Klaviyo settings await account review.
-    trackMeta("PageView");
-    const onConsentChange = () => trackMeta("PageView");
-    window.addEventListener(CONSENT_CHANGED_EVENT, onConsentChange);
-    return () => window.removeEventListener(CONSENT_CHANGED_EVENT, onConsentChange);
-  }, [pathname]);
+    purgeLegacyTrackingState();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -165,7 +159,6 @@ function RootComponent() {
         <Outlet />
       </main>
       {!isFunnel && !isChromeless && <Footer />}
-      {!isProtectedPage(pathname) && <CookieConsent />}
       <Toaster position="top-right" richColors closeButton duration={5000} />
     </QueryClientProvider>
   );
