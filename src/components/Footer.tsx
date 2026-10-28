@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { TrustBadges } from "./TrustBadges";
 import creamLogo from "../assets/legacyrx-cream.webp";
-import { OPEN_CONSENT_CHOICES_EVENT } from "@/lib/analytics-consent";
 
 export function Footer() {
   return (
@@ -75,14 +74,6 @@ export function Footer() {
             <ul>
               <li>
                 <Link to="/privacy-policy">Privacy Policy</Link>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new Event(OPEN_CONSENT_CHOICES_EVENT))}
-                >
-                  Cookie choices
-                </button>
               </li>
               <li>
                 <Link to="/hipaa-notice">HIPAA Notice</Link>

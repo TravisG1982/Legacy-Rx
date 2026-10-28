@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { Wordmark } from "./Brand";
 import { OrderHelp } from "./OrderHelp";
 import { useFromPrices } from "@/hooks/use-live-prices";
-import { OPEN_CONSENT_CHOICES_EVENT } from "@/lib/analytics-consent";
 
 export function FunnelShell({
   pct,
@@ -55,13 +54,7 @@ export function FunnelShell({
         © 2026 LegacyRX LLC. All rights reserved.
         <div className="mini-links">
           <Link to="/privacy-policy">Privacy Policy</Link> · <Link to="/hipaa-notice">HIPAA</Link> ·{" "}
-          <Link to="/returns-refund-policy">Returns & Refunds</Link> ·{" "}
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event(OPEN_CONSENT_CHOICES_EVENT))}
-          >
-            Cookie choices
-          </button>
+          <Link to="/returns-refund-policy">Returns & Refunds</Link>
         </div>
       </div>
     </div>

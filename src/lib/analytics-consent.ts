@@ -1,3 +1,6 @@
+// GA4 and Meta are disabled outright (see analytics.ts): nothing reads this choice
+// to enable them and no UI offers it. The helpers remain only for the future,
+// separately approved setup.
 export type AnalyticsChoice = "accepted" | "declined";
 
 // Versioned so prior "accept" records (when scripts loaded before consent)
@@ -5,7 +8,6 @@ export type AnalyticsChoice = "accepted" | "declined";
 const STORAGE_KEY = "legacyrx-cookie-consent-v2";
 export const CONSENT_COOKIE = "lrx_analytics_consent";
 export const CONSENT_CHANGED_EVENT = "legacyrx:analytics-consent-changed";
-export const OPEN_CONSENT_CHOICES_EVENT = "legacyrx:open-cookie-choices";
 
 export function analyticsChoice(): AnalyticsChoice | null {
   if (typeof window === "undefined") return null;
@@ -58,4 +60,31 @@ export function isTrackingExcludedPage(pathname: string): boolean {
     pathname.startsWith("/start/") ||
     pathname.startsWith("/pay-test/")
   );
+}
+
+/**
+ * Remove marketing-tracking leftovers from earlier builds: a stored analytics
+ * choice, our consent cookie, Meta `_fbp`/`_fbc` cookies and the session-scoped
+ * Meta identifiers. Only deletes; never creates anything.
+ */
+export function purgeLegacyTrackingState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.sessionStorage.removeItem("lrx_external_id");
+    window.sessionStorage.removeItem("lrx_meta_test_event_code");
+  } catch {
+    // Storage may be unavailable; nothing to clean in that case.
+  }
+  try {
+    const host = window.location.hostname.replace(/^www\./, "");
+    const domains = ["", ...(host.includes(".") ? [`; Domain=.${host}`, `; Domain=${host}`] : [])];
+    for (const name of [CONSENT_COOKIE, "_fbp", "_fbc"]) {
+      for (const domain of domains) {
+        document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax${domain}`;
+      }
+    }
+  } catch {
+    // Cookies may be unavailable.
+  }
 }
