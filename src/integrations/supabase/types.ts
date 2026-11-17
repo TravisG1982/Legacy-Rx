@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      beluga_visits: {
+        Row: { master_id: string; environment: "test" | "live"; order_id: string | null; test_reference: string | null; creation_status: "pending" | "created" | "uncertain" | "failed"; created_at: string; beluga_created_at: string | null }
+        Insert: { master_id: string; environment: "test" | "live"; order_id?: string | null; test_reference?: string | null; creation_status?: "pending" | "created" | "uncertain" | "failed"; created_at?: string; beluga_created_at?: string | null }
+        Update: { creation_status?: "pending" | "created" | "uncertain" | "failed"; beluga_created_at?: string | null }
+        Relationships: []
+      }
+      beluga_webhook_events: {
+        Row: { id: string; master_id: string; environment: "test" | "live"; event: string; received_at: string; payload: Json; fingerprint: string; possible_duplicate: boolean }
+        Insert: { id?: string; master_id: string; environment: "test" | "live"; event: string; received_at?: string; payload: Json; fingerprint: string; possible_duplicate: boolean }
+        Update: { payload?: Json }
+        Relationships: []
+      }
       admin_roles: {
         Row: { user_id: string; role: "owner" | "staff"; view_leads: boolean; delete_leads: boolean; view_pricing: boolean; manage_coupons: boolean; created_at: string; updated_at: string }
         Insert: { user_id: string; role: "owner" | "staff"; view_leads?: boolean; delete_leads?: boolean; view_pricing?: boolean; manage_coupons?: boolean; created_at?: string; updated_at?: string }
@@ -511,6 +523,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      receive_beluga_webhook: { Args: { p_environment: string; p_payload: Json; p_fingerprint: string }; Returns: string }
       delete_admin_coupon: { Args: { p_actor_id: string; p_coupon_id: string }; Returns: undefined }
       delete_admin_funnel_leads: { Args: { p_actor_id: string; p_lead_ids: string[] }; Returns: number }
       save_admin_coupon: { Args: { p_actor_id: string; p_coupon_id: string | null; p_code: string; p_type: string; p_amount: number; p_active: boolean; p_expires_at: string | null; p_max_uses: number | null; p_meds: string[] }; Returns: string }
